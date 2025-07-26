@@ -1,0 +1,15 @@
+# Alt + ↵           To add a new todo
+# Alt + D           To mark a todo as done
+# Alt + Shift + D   To mark a todo as cancelled
+# Alt + S           To mark a todo as started
+
+Pending Taks:
+    ✔ Write a README.md file @30m @today @done(25-07-26 21:08)
+    ✔ Remove flutter_context_menu, keymap, os_detect, perfect_freehand @30m @today @done(25-07-26 13:27)
+    ✔ Add undo/redo & history view component @30m @today @done(25-07-26 04:50)
+    ✔ Shortcut switching nodes @30m @today @done(25-07-26 14:53)
+    ☐ Menu dropdown @30m @today 
+    ☐ Project save and load in example
+    ☐ Styling and theming (will define better later)
+    ☐ Add more shapes
+
