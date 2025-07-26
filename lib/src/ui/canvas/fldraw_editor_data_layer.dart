@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:fldraw/src/core/utils/platform_info/platform_info.dart'
+    show PlatformInfoImpl;
 import 'dart:math';
 
 import 'package:fldraw/fldraw.dart';
@@ -1214,7 +1215,8 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
                   ),
                 );
 
-                if (Platform.isAndroid || Platform.isIOS) {
+                final platform = PlatformInfoImpl();
+                if (platform.isAndroid || platform.isIOS) {
                   return GestureDetector(
                     onTap: () => _selectionBloc.add(SelectionCleared()),
                     child: canvasChild,

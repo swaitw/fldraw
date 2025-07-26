@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:fldraw/fldraw.dart';
+import 'package:fldraw/src/core/utils/platform_info/platform_info.dart';
 import 'package:fldraw/src/core/utils/renderbox.dart';
 import 'package:fldraw/src/ui/shared/improved_listener.dart';
 import 'package:flutter/gestures.dart';
@@ -54,9 +53,10 @@ class _DefaultNodeWidgetState extends State<DefaultNodeWidget> {
 
   void _onPointerDown(PointerDownEvent event) {
     if (event.buttons == kPrimaryMouseButton) {
+      final platform = PlatformInfoImpl();
       final isCtrlPressed =
           HardwareKeyboard.instance.isControlPressed ||
-          (Platform.isMacOS && HardwareKeyboard.instance.isMetaPressed);
+          (platform.isMacOS && HardwareKeyboard.instance.isMetaPressed);
 
       if (!widget.node.state.isSelected) {
         if (isCtrlPressed) {
