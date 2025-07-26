@@ -295,10 +295,12 @@ If you'd like to contribute, please feel free to:
 
 This project is authored and maintained by **Yash Makan**.
 
-Just another developer. I am currently open looking for new job opportunities and interesting contract projects. If you are looking for a dedicated Flutter developer or have an exciting project in mind, please feel free to reach out!
+Building software in public and sharing everything I learn along the way.
+
+I am currently open looking for new job opportunities and interesting contract projects. If you are looking for a dedicated Flutter developer or have an exciting project in mind, please feel free to reach out 🙏
 
 - **Email**: [contact@yashmakan.com](mailto:contact@yashmakan.com)
-- **Portfolio/Website**: [yashmakan.com](https://yashmakan.com)
+- **Website**: [yashmakan.com](https://yashmakan.com)
 - **LinkedIn**: [linkedin.com/in/yashmakan](https://www.linkedin.com/in/yashmakan)
 - **GitHub**: [@yashmakan](https://github.com/yashmakan)
 - **Cal.com**: [@yashmakan](https://cal.com/yashmakan/30min)
