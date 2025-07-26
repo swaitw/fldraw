@@ -10,7 +10,9 @@ A powerful, extensible, and high-performance infinite canvas and diagramming lib
 
 `fldraw` provides a complete toolkit for building applications that require node-based editors, whiteboarding, or any kind of interactive canvas. It's built from the ground up with performance and customization in mind, using a custom rendering pipeline to ensure a smooth experience even with a large number of objects.
 
-![fldraw Showcase GIF](https://raw.githubusercontent.com/fldraw/fldraw/main/assets/readme/fldraw_showcase.gif)
+<p align="center">
+  <img src="https://i.ibb.co/tMn7pHjb/Build-using-Flutter.png" alt="Build using Flutter" width="450"/>
+</p>
 
 ---
 
