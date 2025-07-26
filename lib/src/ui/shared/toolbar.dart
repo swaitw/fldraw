@@ -318,9 +318,7 @@ class FlToolbar extends StatelessWidget {
       },
     ).future.then((value) async {
       if (value != null && value is String) {
-        print(value);
         final String svgString = await rootBundle.loadString(value);
-        print(svgString);
         final pictureInfo = await vg.loadPicture(
           SvgStringLoader(svgString),
           null,

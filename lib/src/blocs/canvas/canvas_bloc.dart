@@ -171,7 +171,6 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
   void _onNodeToggled(NodeToggled event, Emitter<CanvasState> emit) {
     final newNodes = Map<String, NodeInstance>.from(state.nodes);
     final node = newNodes[event.nodeId];
-    print("node::$node");
     if (node != null) {
       _pushToUndoStack(event, emit, state);
       final oldState = node.state;
@@ -359,8 +358,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
         ),
       );
     } catch (e, s) {
-      print(e);
-      print(s);
+      throw Exception('Failed to load project: $e\n$s');
     }
   }
 

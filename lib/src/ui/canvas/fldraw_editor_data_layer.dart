@@ -187,14 +187,12 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
 
     if (newSnapPoint != _hoveredSnapPoint) {
       _hoveredSnapPoint = newSnapPoint;
-      print("updated _hoveredSnapPoint ::$_hoveredSnapPoint}");
       if (shouldCheckForSnapping &&
           _startSnapPoint != null &&
           newSnapPoint != null) {
         return;
       } else if (shouldCheckForSnapping && _hoveredSnapPoint != null) {
         _startSnapPoint = _hoveredSnapPoint;
-        print("updated _startSnapPoint :: $_startSnapPoint");
       }
       setState(() {});
     }

@@ -19,6 +19,7 @@ dependencies:
 
   perfect_freehand: ^2.3.2
   flutter_svg: ^2.2.0
+  vector_graphics: ^1.1.19
   shadcn_flutter: ^0.0.37
 
   bloc: ^9.0.0
