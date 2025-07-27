@@ -1,3 +1,8 @@
+## 0.1.0 - 2025-07-27
+
+- Updated README.md to include a new "Roadmap & Future Features" section, outlining planned improvements and upcoming features for the library.
+- No functional code changes in this version.
+
 ## 0.0.1 - 2025-07-26
 
 ### Added

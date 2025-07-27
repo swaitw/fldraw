@@ -1,6 +1,7 @@
 # fldraw
 
 [![Pub Version](https://img.shields.io/pub/v/fldraw.svg)](https://pub.dev/packages/fldraw)
+[![Project Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](https://github.com/fldraw/fldraw#-project-status-alpha)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Stars](https://img.shields.io/github/stars/fldraw/fldraw.svg)](https://github.com/fldraw/fldraw/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/fldraw/fldraw.svg)](https://github.com/fldraw/fldraw/issues)
@@ -260,6 +261,24 @@ FlDrawCanvas(
   },
 )
 ```
+
+## Roadmap & Future Features
+
+`fldraw` is under active development. My goal is to make it the most powerful and easy-to-use diagramming library for Flutter. Below is a list of planned features and improvements. Contributions are highly welcome!
+
+☐ **Style & Property Inspector**: Implement a robust styling system (fill color, stroke, text properties) and a property panel widget to edit selected objects.
+
+☐ **Mobile & Touchscreen Enhancements**: Add intuitive two-finger gestures like pinch-to-zoom and two-finger pan.
+
+☐ **Contextual Mobile UI**: Create a "delete" button or menu that appears above selected objects for easier interaction on touch devices.
+
+☐ **Canvas Minimap**: Add a small navigator view, similar to `tldraw`, for a high-level overview and quick panning.
+
+☐ **Desktop-Style Menu Bar**: Implement a classic menu bar (`File`, `Edit`, `View`) with common actions like Export and a list of keyboard shortcuts.
+
+☐ **Enhanced Exporting**: Add functionality to export the canvas as an image (PNG/SVG).
+
+☐ **Improved Example Project**: Enhance the example application to demonstrate saving and loading project state to/from a file.
 
 ## Contributing ❤️
 
