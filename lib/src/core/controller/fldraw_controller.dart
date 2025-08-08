@@ -111,6 +111,48 @@ class FlDrawControllerImpl implements FlDrawController {
     return _toolBloc!.state;
   }
 
+  /// Gets the list of all [NodeInstance]s currently in the canvas.
+  @override
+  Map<String, NodeInstance> get nodes {
+    _assertIsInitialized();
+    return canvasState.nodes;
+  }
+
+  /// Gets the list of all [DrawingObject]s currently in the canvas.
+  @override
+  Map<String, DrawingObject> get drawingObjects {
+    _assertIsInitialized();
+    return canvasState.drawingObjects;
+  }
+
+  /// Gets the current viewport offset.
+  @override
+  Offset get viewportOffset {
+    _assertIsInitialized();
+    return canvasState.viewportOffset;
+  }
+
+  /// Gets the current viewport zoom level.
+  @override
+  double get viewportZoom {
+    _assertIsInitialized();
+    return canvasState.viewportZoom;
+  }
+
+  /// Gets the undo history stack.
+  @override
+  List<HistoryEntry> get undoStack {
+    _assertIsInitialized();
+    return canvasState.undoStack;
+  }
+
+  /// Gets the redo history stack.
+  @override
+  List<HistoryEntry> get redoStack {
+    _assertIsInitialized();
+    return canvasState.redoStack;
+  }
+
   // --- Tool Methods ---
 
   /// Sets the active drawing tool.
