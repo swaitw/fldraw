@@ -7,7 +7,11 @@ part 'tool_state.dart';
 
 class ToolBloc extends Bloc<ToolEvent, ToolState> {
   ToolBloc() : super(const ToolState()) {
-    on<ToolSelected>(_onToolSelected);
+    on<ToolEvent>((event, emit) async {
+      return (switch (event) {
+        ToolSelected e => _onToolSelected(e, emit),
+      });
+    });
   }
 
   void _onToolSelected(ToolSelected event, Emitter<ToolState> emit) {

@@ -6,9 +6,13 @@ part 'selection_state.dart';
 
 class SelectionBloc extends Bloc<SelectionEvent, SelectionState> {
   SelectionBloc() : super(const SelectionState()) {
-    on<SelectionObjectsAdded>(_onSelectionObjectsAdded);
-    on<SelectionReplaced>(_onSelectionReplaced);
-    on<SelectionCleared>(_onSelectionCleared);
+    on<SelectionEvent>((event, emit) async {
+      return (switch (event) {
+        SelectionObjectsAdded e => _onSelectionObjectsAdded(e, emit),
+        SelectionReplaced e => _onSelectionReplaced(e, emit),
+        SelectionCleared e => _onSelectionCleared(e, emit),
+      });
+    });
   }
 
   void _onSelectionObjectsAdded(

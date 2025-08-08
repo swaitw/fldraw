@@ -14,25 +14,30 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
   static const int _maxHistoryStack = 100;
 
   CanvasBloc() : super(const CanvasState()) {
-    on<CanvasPanned>(_onCanvasPanned);
-    on<CanvasZoomed>(_onCanvasZoomed);
-    on<NodeAdded>(_onNodeAdded);
-    on<DrawingObjectAdded>(_onDrawingObjectAdded);
-    on<ObjectsRemoved>(_onObjectsRemoved);
-    on<ObjectsDragged>(_onObjectsDragged);
-    on<ObjectsDragEnded>(_onObjectsDragEnded);
-    on<DrawingObjectUpdated>(_onDrawingObjectUpdated);
-    on<ObjectsResizeEnded>(_onObjectsResizeEnded);
-    on<NodeValueUpdated>(_onNodeValueUpdated);
-    on<NodeHeadingUpdated>(_onNodeHeadingUpdated);
-    on<NodeToggled>(_onNodeToggled);
-    on<UndoRequested>(_onUndo);
-    on<RedoRequested>(_onRedo);
-    on<ProjectSaved>(_onProjectSaved);
-    on<ProjectLoaded>(_onProjectLoaded);
-    on<NewProjectCreated>(_onNewProjectCreated);
-    on<SelectionCut>(_onSelectionCut);
-    on<SelectionPasted>(_onSelectionPasted);
+    on<CanvasEvent>((event, emit) async {
+      return (switch (event) {
+        CanvasPanned e => _onCanvasPanned(e, emit),
+        CanvasZoomed e => _onCanvasZoomed(e, emit),
+        NodeAdded e => _onNodeAdded(e, emit),
+        DrawingObjectAdded e => _onDrawingObjectAdded(e, emit),
+        ObjectsRemoved e => _onObjectsRemoved(e, emit),
+        ObjectsDragged e => _onObjectsDragged(e, emit),
+        ObjectsDragEnded e => _onObjectsDragEnded(e, emit),
+        DrawingObjectUpdated e => _onDrawingObjectUpdated(e, emit),
+        ObjectsResizeEnded e => _onObjectsResizeEnded(e, emit),
+        NodeValueUpdated e => _onNodeValueUpdated(e, emit),
+        NodeHeadingUpdated e => _onNodeHeadingUpdated(e, emit),
+        NodeToggled e => _onNodeToggled(e, emit),
+        UndoRequested e => _onUndo(e, emit),
+        RedoRequested e => _onRedo(e, emit),
+        ProjectSaved e => _onProjectSaved(e, emit),
+        ProjectLoaded e => _onProjectLoaded(e, emit),
+        NewProjectCreated e => _onNewProjectCreated(e, emit),
+        SelectionCut e => _onSelectionCut(e, emit),
+        SelectionPasted e => _onSelectionPasted(e, emit),
+        SelectionCopied e => _onSelectionCopied(e, emit),
+      });
+    });
   }
 
   void _emitWithHistory(
@@ -387,4 +392,6 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       emit(state.copyWith(nodes: newNodes));
     }
   }
+
+  void _onSelectionCopied(SelectionCopied e, Emitter<CanvasState> emit) {}
 }
