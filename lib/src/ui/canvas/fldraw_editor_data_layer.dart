@@ -578,11 +578,48 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
         final updatedObject = lineObject.copyWith(midPoint: midPoint);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
       }
+    } else if (object is TextObject) {
+      if (_originalResizeRect!.width <= 0 || _originalResizeRect!.height <= 0) {
+        return;
+      }
+
+      final Offset anchor;
+      switch (handle) {
+        case Handle.topLeft:
+          anchor = _originalResizeRect!.bottomRight;
+          break;
+        case Handle.topRight:
+          anchor = _originalResizeRect!.bottomLeft;
+          break;
+        case Handle.bottomRight:
+          anchor = _originalResizeRect!.topLeft;
+          break;
+        case Handle.bottomLeft:
+          anchor = _originalResizeRect!.topRight;
+          break;
+        default:
+          return;
+      }
+
+      final aspectRatio =
+          _originalResizeRect!.width / _originalResizeRect!.height;
+      final newRect = _resizeWithAspectRatio(
+        worldPos: worldPos,
+        originalAspectRatio: aspectRatio,
+        anchor: anchor,
+      );
+
+      if (newRect.shortestSide < 10.0) return;
+
+      final updatedObject = object.copyWith(
+        rect: newRect,
+        style: object.style.copyWith(fontSize: newRect.height * 0.8),
+      );
+      _canvasBloc.add(DrawingObjectUpdated(updatedObject));
     } else if (object is RectangleObject ||
         object is CircleObject ||
         object is FigureObject ||
-        object is SvgObject ||
-        object is TextObject) {
+        object is SvgObject) {
       final bool isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
 
       final Offset anchorWorld;
