@@ -240,6 +240,8 @@ class LineObject extends DrawingObject {
   Offset start;
   Offset end;
   Offset? midPoint;
+  final ObjectAttachment? startAttachment;
+  final ObjectAttachment? endAttachment;
 
   LineObject({
     required super.id,
@@ -247,6 +249,8 @@ class LineObject extends DrawingObject {
     required this.end,
     this.midPoint,
     super.isSelected,
+    this.startAttachment,
+    this.endAttachment,
   });
 
   @override
@@ -299,6 +303,8 @@ class LineObject extends DrawingObject {
     'start': start.toJson(),
     'end': end.toJson(),
     'isSelected': isSelected,
+    'startAttachment': startAttachment?.toJson(),
+    'endAttachment': endAttachment?.toJson(),
   };
 
   factory LineObject.fromJson(Map<String, dynamic> json) {
@@ -307,6 +313,12 @@ class LineObject extends DrawingObject {
       start: JSONOffset.fromJson((json['start'] as List).cast<double>()),
       end: JSONOffset.fromJson((json['end'] as List).cast<double>()),
       isSelected: json['isSelected'] ?? false,
+      startAttachment: json['startAttachment'] != null
+          ? ObjectAttachment.fromJson(json['startAttachment'])
+          : null,
+      endAttachment: json['endAttachment'] != null
+          ? ObjectAttachment.fromJson(json['endAttachment'])
+          : null,
     );
   }
 
@@ -316,6 +328,8 @@ class LineObject extends DrawingObject {
     Offset? end,
     Offset? midPoint,
     bool? isSelected,
+    ObjectAttachment? startAttachment,
+    ObjectAttachment? endAttachment,
   }) {
     return LineObject(
       id: id,
@@ -323,6 +337,8 @@ class LineObject extends DrawingObject {
       end: end ?? this.end,
       midPoint: midPoint ?? this.midPoint,
       isSelected: isSelected ?? this.isSelected,
+      startAttachment: startAttachment ?? this.startAttachment,
+      endAttachment: endAttachment ?? this.endAttachment,
     );
   }
 }
