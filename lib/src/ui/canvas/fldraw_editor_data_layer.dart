@@ -70,6 +70,11 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   bool _isDraggingSelection = false;
   bool _isDrawing = false;
 
+  bool _isRotating = false;
+  Offset _rotationStartCenter = Offset.zero;
+  double _rotationStartAngle = 0.0;
+  double _originalObjectAngle = 0.0;
+
   ({String objectId, Handle handle}) _isResizing = (
     objectId: '',
     handle: Handle.none,
@@ -285,6 +290,10 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     }
 
     if (tool == EditorTool.arrow) {
+      if (_hoveredHandle.handle == Handle.rotate) {
+        _beginRotation(worldPos);
+        return;
+      }
       _handleArrowToolPointerDown(event, worldPos);
     } else {
       _handleDrawingToolPointerDown(event, worldPos);
@@ -306,7 +315,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
 
     _updateSnapHandle(worldPos);
 
-    if (_isResizing.handle != Handle.none) {
+    if (_isRotating) {
+      _handleObjectRotation(worldPos);
+    } else if (_isResizing.handle != Handle.none) {
       _handleObjectResizing(worldPos);
     } else if (_isDraggingSelection) {
       final dragDelta = event.delta / _canvasBloc.state.viewportZoom;
@@ -320,7 +331,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       );
     } else if (_isAreaSelecting) {
       setState(
-        () => _selectionArea = Rect.fromPoints(_selectionStart, worldPos),
+            () => _selectionArea = Rect.fromPoints(_selectionStart, worldPos),
       );
     } else if (_isDrawing) {
       _handleObjectDrawing(worldPos, event.pressure);
@@ -339,13 +350,49 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       _canvasBloc.add(const ObjectsResizeEnded());
     }
 
+    if (_isRotating) {
+      _finalizeRotation();
+    }
+
     if (_isDraggingSelection) {
       _canvasBloc.add(const ObjectsDragEnded());
     }
-
+    _isRotating = false;
     _isDraggingSelection = false;
     _isResizing = (objectId: '', handle: Handle.none);
     _originalResizeRect = null;
+  }
+
+  void _beginRotation(Offset worldPos) {
+    final objectId = _hoveredHandle.objectId;
+    final object = _canvasBloc.state.drawingObjects[objectId];
+    if (object == null) return;
+
+    setState(() {
+      _isRotating = true;
+      _rotationStartCenter = object.rect.center;
+      _originalObjectAngle = object.angle;
+      _rotationStartAngle =
+          (worldPos - _rotationStartCenter).direction;
+    });
+  }
+
+  void _handleObjectRotation(Offset worldPos) {
+    final objectId = _hoveredHandle.objectId;
+    final object = _canvasBloc.state.drawingObjects[objectId];
+    if (object == null) return;
+
+    final currentAngle = (worldPos - _rotationStartCenter).direction;
+    final angleDelta = currentAngle - _rotationStartAngle;
+    final newAngle = _originalObjectAngle + angleDelta;
+
+    final updatedObject = (object as dynamic).copyWith(angle: newAngle);
+    _canvasBloc.add(DrawingObjectUpdated(updatedObject));
+  }
+
+  void _finalizeRotation() {
+    _canvasBloc.add(const ObjectsRotationEnded());
+    _isRotating = false;
   }
 
   void _onDoubleClick() {
@@ -454,171 +501,84 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     final object = _canvasBloc.state.drawingObjects[objectId];
     if (object == null || _originalResizeRect == null) return;
 
-    final bool isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-
-    if (object is ArrowObject) {
-      final start = (object as dynamic).start;
-      final end = (object as dynamic).end;
-      final pathType = (object as dynamic).pathType;
-
-      if (pathType == LinkPathType.orthogonal) {
-        Offset newStart = start;
-        Offset newEnd = end;
-        Offset cornerDelta;
-        final dx = end.dx - start.dx;
-        final dy = end.dy - start.dy;
-
-        if (dx.abs() > dy.abs()) {
-          cornerDelta = Offset(end.dx, start.dy);
-        } else {
-          cornerDelta = Offset(start.dx, end.dy);
-        }
-
-        if (handle == Handle.arrowStart || handle == Handle.arrowEnd) {
-          final dragDelta =
-              worldPos - (handle == Handle.arrowStart ? start : end);
-          if (dragDelta.dx.abs() > dragDelta.dy.abs()) {
-            if (handle == Handle.arrowStart) {
-              newStart = Offset(worldPos.dx, start.dy);
-            } else {
-              newEnd = Offset(worldPos.dx, end.dy);
-            }
-          } else {
-            if (handle == Handle.arrowStart) {
-              newStart = Offset(start.dx, worldPos.dy);
-            } else {
-              newEnd = Offset(end.dx, worldPos.dy);
-            }
-          }
-        } else if (handle == Handle.midPoint) {
-          final dx = end.dx - start.dx;
-          final dy = end.dy - start.dy;
-
-          if (dx.abs() > dy.abs()) {
-            cornerDelta = worldPos - Offset(end.dx, start.dy);
-            newStart = Offset(start.dx, start.dy + cornerDelta.dy);
-            newEnd = Offset(end.dx + cornerDelta.dx, end.dy);
-          } else {
-            cornerDelta = worldPos - Offset(start.dx, end.dy);
-            newStart = Offset(start.dx + cornerDelta.dx, start.dy);
-            newEnd = Offset(end.dx, end.dy + cornerDelta.dy);
-          }
-        }
-
-        final updatedObject = (object).copyWith(
-          start: newStart,
-          end: newEnd,
-          midPoint: cornerDelta,
-        );
+    if (object is ArrowObject || object is LineObject) {
+      dynamic lineObject = object;
+      final start = lineObject.start;
+      final end = lineObject.end;
+      if (handle == Handle.arrowStart) {
+        final updatedObject = lineObject.copyWith(start: worldPos);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      } else {
-        if (handle == Handle.arrowStart) {
-          final updatedObject = object.copyWith(start: worldPos);
-          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-        } else if (handle == Handle.arrowEnd) {
-          final updatedObject = object.copyWith(end: worldPos);
-          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-        } else if (handle == Handle.midPoint) {
-          final midPoint = (worldPos * 2) - (start * 0.5) - (end * 0.5);
-          final updatedObject = object.copyWith(midPoint: midPoint);
-          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-        }
-      }
-      return;
-    } else if (object is LineObject) {
-      final start = object.start;
-      final end = object.end;
-
-      if (_isResizing.handle == Handle.arrowStart) {
-        final updatedObject = object.copyWith(start: worldPos);
+      } else if (handle == Handle.arrowEnd) {
+        final updatedObject = lineObject.copyWith(end: worldPos);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      } else if (_isResizing.handle == Handle.arrowEnd) {
-        final updatedObject = object.copyWith(end: worldPos);
-        _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      } else if (_isResizing.handle == Handle.midPoint) {
+      } else if (handle == Handle.midPoint) {
         final midPoint = (worldPos * 2) - (start * 0.5) - (end * 0.5);
-        final updatedObject = object.copyWith(midPoint: midPoint);
+        final updatedObject = lineObject.copyWith(midPoint: midPoint);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
       }
-    } else if (object is TextObject) {
-      if (_originalResizeRect!.width <= 0 || _originalResizeRect!.height <= 0) {
-        return;
-      }
-
-      final Offset anchor;
-      switch (handle) {
-        case Handle.topLeft:
-          anchor = _originalResizeRect!.bottomRight;
-          break;
-        case Handle.topRight:
-          anchor = _originalResizeRect!.bottomLeft;
-          break;
-        case Handle.bottomRight:
-          anchor = _originalResizeRect!.topLeft;
-          break;
-        case Handle.bottomLeft:
-          anchor = _originalResizeRect!.topRight;
-          break;
-        default:
-          return;
-      }
-
-      final aspectRatio =
-          _originalResizeRect!.width / _originalResizeRect!.height;
-      final newRect = _resizeWithAspectRatio(
-        worldPos: worldPos,
-        originalAspectRatio: aspectRatio,
-        anchor: anchor,
-      );
-
-      // Prevent from bein too small or inverted
-      if (newRect.shortestSide < 10.0) return;
-
-      final updatedObject = object.copyWith(
-        rect: newRect,
-        style: object.style.copyWith(fontSize: newRect.height * 0.8),
-      );
-      _canvasBloc.add(DrawingObjectUpdated(updatedObject));
     } else if (object is RectangleObject ||
         object is CircleObject ||
         object is FigureObject ||
-        object is SvgObject) {
-      Rect oldRect = object.rect;
-      Offset anchor;
+        object is SvgObject ||
+        object is TextObject) {
+      final bool isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+
+      final Offset anchorWorld;
       switch (handle) {
         case Handle.topLeft:
-          anchor = oldRect.bottomRight;
+          anchorWorld = _originalResizeRect!.bottomRight
+              .rotate(_originalResizeRect!.center, object.angle);
           break;
         case Handle.topRight:
-          anchor = oldRect.bottomLeft;
+          anchorWorld = _originalResizeRect!.bottomLeft
+              .rotate(_originalResizeRect!.center, object.angle);
           break;
         case Handle.bottomRight:
-          anchor = oldRect.topLeft;
+          anchorWorld = _originalResizeRect!.topLeft
+              .rotate(_originalResizeRect!.center, object.angle);
           break;
         case Handle.bottomLeft:
-          anchor = oldRect.topRight;
+          anchorWorld = _originalResizeRect!.topRight
+              .rotate(_originalResizeRect!.center, object.angle);
           break;
         default:
           return;
       }
 
-      Rect newRect;
+      var dragVector = worldPos - anchorWorld;
+      var localDragVector = dragVector.rotate(Offset.zero, -object.angle);
+
       if (isShiftPressed &&
           _originalResizeRect!.width > 0 &&
           _originalResizeRect!.height > 0) {
         final aspectRatio =
             _originalResizeRect!.width / _originalResizeRect!.height;
-        newRect = _resizeWithAspectRatio(
-          worldPos: worldPos,
-          originalAspectRatio: aspectRatio,
-          anchor: anchor,
-        );
-      } else {
-        newRect = Rect.fromPoints(anchor, worldPos);
+        final newAspectRatio =
+            localDragVector.dx.abs() / localDragVector.dy.abs();
+        if (newAspectRatio > aspectRatio) {
+          localDragVector = Offset(localDragVector.dx,
+              localDragVector.dx.abs() / aspectRatio * localDragVector.dy.sign);
+        } else {
+          localDragVector = Offset(
+              localDragVector.dy.abs() * aspectRatio * localDragVector.dx.sign,
+              localDragVector.dy);
+        }
+        // Re-rotate the constrained vector back to world space
+        dragVector = localDragVector.rotate(Offset.zero, object.angle);
       }
 
+      // 5. The new center is the midpoint of the new world-space diagonal
+      final newCenter = anchorWorld + dragVector / 2;
+      final newRect = Rect.fromCenter(
+        center: newCenter,
+        width: localDragVector.dx.abs(),
+        height: localDragVector.dy.abs(),
+      );
+
+      // 6. Update the object
       dynamic updatedObject;
       if (object is TextObject) {
+        if (newRect.shortestSide < 10.0) return;
         updatedObject = object.copyWith(
           rect: newRect,
           style: object.style.copyWith(fontSize: newRect.height * 0.8),
@@ -626,12 +586,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       } else {
         updatedObject = (object as dynamic).copyWith(rect: newRect);
       }
-
-      if (updatedObject != null) {
-        _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      }
+      _canvasBloc.add(DrawingObjectUpdated(updatedObject));
     } else if (object is PencilStrokeObject) {
-      // todo: still pencil strokes cannot be resized
+      // Resizing for pencil strokes is not yet implemented
     }
   }
 
@@ -1013,6 +970,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     if (worldPos == null) return;
 
     final handleHitAreaRadius = 10.0 / canvasState.viewportZoom;
+    final rotationHitAreaRadius = 22.0 / canvasState.viewportZoom;
 
     for (final objectId in selectionState.selectedDrawingObjectIds) {
       final obj = canvasState.drawingObjects[objectId];
@@ -1024,6 +982,15 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           obj is TextObject ||
           obj is SvgObject ||
           obj is PencilStrokeObject) {
+
+        final center = obj.rect.center;
+        final translatedPos = worldPos - center;
+        final rotatedPos = Offset(
+          translatedPos.dx * cos(-obj.angle) - translatedPos.dy * sin(-obj.angle),
+          translatedPos.dx * sin(-obj.angle) + translatedPos.dy * cos(-obj.angle),
+        );
+        final localPos = rotatedPos + center;
+
         final selectionRect = obj.rect.inflate(4.0 / canvasState.viewportZoom);
         final handles = {
           Handle.topLeft: selectionRect.topLeft,
@@ -1032,12 +999,21 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           Handle.bottomLeft: selectionRect.bottomLeft,
         };
         for (final entry in handles.entries) {
-          if ((worldPos - entry.value).distance < handleHitAreaRadius) {
-            if (_hoveredHandle.objectId != objectId ||
-                _hoveredHandle.handle != entry.key) {
-              setState(
-                () => _hoveredHandle = (objectId: objectId, handle: entry.key),
-              );
+          final distance = (localPos - entry.value).distance;
+
+          if (distance < rotationHitAreaRadius) {
+            if (distance < handleHitAreaRadius) {
+              if (_hoveredHandle.objectId != objectId ||
+                  _hoveredHandle.handle != entry.key) {
+                setState(
+                        () => _hoveredHandle = (objectId: objectId, handle: entry.key));
+              }
+            } else {
+              if (_hoveredHandle.objectId != objectId ||
+                  _hoveredHandle.handle != Handle.rotate) {
+                setState(
+                        () => _hoveredHandle = (objectId: objectId, handle: Handle.rotate));
+              }
             }
             return;
           }
@@ -1508,6 +1484,8 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           return SystemMouseCursors.resizeColumn;
         case Handle.midPoint:
           return SystemMouseCursors.grab;
+        case Handle.rotate: // Add this case
+          return SystemMouseCursors.alias;
         default:
           return SystemMouseCursors.basic;
       }

@@ -29,6 +29,7 @@ enum Handle {
   arrowStart,
   arrowEnd,
   midPoint,
+  rotate,
   // For no handle
   none,
 }
@@ -38,20 +39,21 @@ enum LinkPathType { straight, orthogonal }
 abstract class DrawingObject {
   final String id;
   bool isSelected;
+  final double angle;
 
-  DrawingObject({required this.id, this.isSelected = false});
+  DrawingObject({required this.id, this.isSelected = false, this.angle = 0.0});
 
   Rect get rect;
 
   Map<String, dynamic> toJson();
 
-  DrawingObject copyWith({bool? isSelected});
+  DrawingObject copyWith({bool? isSelected, double? angle});
 }
 
 class RectangleObject extends DrawingObject {
   Rect _rect;
 
-  RectangleObject({required super.id, required Rect rect, super.isSelected})
+  RectangleObject({required super.id, required Rect rect, super.isSelected, super.angle})
     : _rect = rect;
 
   @override
@@ -65,6 +67,7 @@ class RectangleObject extends DrawingObject {
     'type': 'rectangle',
     'rect': _rect.toJson(),
     'isSelected': isSelected,
+    'angle': angle,
   };
 
   factory RectangleObject.fromJson(Map<String, dynamic> json) {
@@ -72,15 +75,17 @@ class RectangleObject extends DrawingObject {
       id: json['id'],
       rect: JSONRect.fromJson(json['rect']),
       isSelected: json['isSelected'] ?? false,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
   @override
-  DrawingObject copyWith({Rect? rect, bool? isSelected}) {
+  DrawingObject copyWith({Rect? rect, bool? isSelected, double? angle}) {
     return RectangleObject(
       id: id,
       rect: rect ?? _rect,
       isSelected: isSelected ?? this.isSelected,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -88,7 +93,7 @@ class RectangleObject extends DrawingObject {
 class CircleObject extends DrawingObject {
   Rect _rect;
 
-  CircleObject({required super.id, required Rect rect, super.isSelected})
+  CircleObject({required super.id, required Rect rect, super.isSelected, super.angle})
     : _rect = rect;
 
   @override
@@ -102,6 +107,7 @@ class CircleObject extends DrawingObject {
     'type': 'circle',
     'rect': _rect.toJson(),
     'isSelected': isSelected,
+    'angle': angle
   };
 
   factory CircleObject.fromJson(Map<String, dynamic> json) {
@@ -109,15 +115,17 @@ class CircleObject extends DrawingObject {
       id: json['id'],
       rect: JSONRect.fromJson(json['rect']),
       isSelected: json['isSelected'] ?? false,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
   @override
-  DrawingObject copyWith({Rect? rect, bool? isSelected}) {
+  DrawingObject copyWith({Rect? rect, bool? isSelected, double? angle}) {
     return CircleObject(
       id: id,
       rect: rect ?? _rect,
       isSelected: isSelected ?? this.isSelected,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -135,6 +143,7 @@ class ArrowObject extends DrawingObject {
     required this.start,
     required this.end,
     super.isSelected,
+    super.angle,
     this.midPoint,
     this.pathType = LinkPathType.straight,
     this.startAttachment,
@@ -199,6 +208,7 @@ class ArrowObject extends DrawingObject {
     'pathType': pathType.name,
     'startAttachment': startAttachment?.toJson(),
     'endAttachment': endAttachment?.toJson(),
+    'angle': angle
   };
 
   factory ArrowObject.fromJson(Map<String, dynamic> json) {
@@ -210,6 +220,7 @@ class ArrowObject extends DrawingObject {
       pathType: LinkPathType.values.byName(json['pathType'] ?? 'straight'),
       startAttachment: json['startAttachment'] != null ? ObjectAttachment.fromJson(json['startAttachment']) : null,
       endAttachment: json['endAttachment'] != null ? ObjectAttachment.fromJson(json['endAttachment']) : null,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
@@ -222,6 +233,7 @@ class ArrowObject extends DrawingObject {
     LinkPathType? pathType,
     ObjectAttachment? startAttachment,
     ObjectAttachment? endAttachment,
+    double? angle,
   }) {
     return ArrowObject(
       id: id,
@@ -232,6 +244,7 @@ class ArrowObject extends DrawingObject {
       pathType: pathType ?? this.pathType,
       startAttachment: startAttachment ?? this.startAttachment,
       endAttachment: endAttachment ?? this.endAttachment,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -251,6 +264,7 @@ class LineObject extends DrawingObject {
     super.isSelected,
     this.startAttachment,
     this.endAttachment,
+    super.angle,
   });
 
   @override
@@ -305,6 +319,7 @@ class LineObject extends DrawingObject {
     'isSelected': isSelected,
     'startAttachment': startAttachment?.toJson(),
     'endAttachment': endAttachment?.toJson(),
+    'angle': angle
   };
 
   factory LineObject.fromJson(Map<String, dynamic> json) {
@@ -319,6 +334,7 @@ class LineObject extends DrawingObject {
       endAttachment: json['endAttachment'] != null
           ? ObjectAttachment.fromJson(json['endAttachment'])
           : null,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
@@ -330,6 +346,7 @@ class LineObject extends DrawingObject {
     bool? isSelected,
     ObjectAttachment? startAttachment,
     ObjectAttachment? endAttachment,
+    double? angle,
   }) {
     return LineObject(
       id: id,
@@ -339,6 +356,7 @@ class LineObject extends DrawingObject {
       isSelected: isSelected ?? this.isSelected,
       startAttachment: startAttachment ?? this.startAttachment,
       endAttachment: endAttachment ?? this.endAttachment,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -351,6 +369,7 @@ class PencilStrokeObject extends DrawingObject {
     required super.id,
     required this.points,
     super.isSelected,
+    super.angle,
   });
 
   @override
@@ -390,6 +409,7 @@ class PencilStrokeObject extends DrawingObject {
     'type': 'pencil_stroke',
     'points': points.map((p) => [p.x, p.y, p.pressure]).toList(),
     'isSelected': isSelected,
+    'angle': angle
   };
 
   factory PencilStrokeObject.fromJson(Map<String, dynamic> json) {
@@ -401,15 +421,17 @@ class PencilStrokeObject extends DrawingObject {
           ) // Default pressure if null
           .toList(),
       isSelected: json['isSelected'] ?? false,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
   @override
-  DrawingObject copyWith({List<PointVector>? points, bool? isSelected}) {
+  DrawingObject copyWith({List<PointVector>? points, bool? isSelected, double? angle}) {
     return PencilStrokeObject(
       id: id,
       points: points ?? this.points,
       isSelected: isSelected ?? this.isSelected,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -425,6 +447,7 @@ class FigureObject extends DrawingObject {
     this.label = "Figure",
     this.childrenIds = const {},
     super.isSelected,
+    super.angle,
   }) : _rect = rect;
 
   @override
@@ -440,6 +463,7 @@ class FigureObject extends DrawingObject {
     'label': label,
     'childrenIds': childrenIds.toList(),
     'isSelected': isSelected,
+    'angle': angle
   };
 
   factory FigureObject.fromJson(Map<String, dynamic> json) {
@@ -451,6 +475,7 @@ class FigureObject extends DrawingObject {
           .cast<String>()
           .toSet(),
       isSelected: json['isSelected'] ?? false,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
@@ -460,6 +485,7 @@ class FigureObject extends DrawingObject {
     String? label,
     Set<String>? childrenIds,
     bool? isSelected,
+    double? angle,
   }) {
     return FigureObject(
       id: id,
@@ -467,6 +493,7 @@ class FigureObject extends DrawingObject {
       label: label ?? this.label,
       childrenIds: childrenIds ?? this.childrenIds,
       isSelected: isSelected ?? this.isSelected,
+      angle: angle ?? this.angle,
     );
   }
 
@@ -503,6 +530,7 @@ class TextObject extends DrawingObject {
     this.style = const TextStyle(fontSize: 16, color: Colors.white),
     this.isEditing = false,
     super.isSelected,
+    super.angle,
   }) : _rect = rect;
 
   @override
@@ -518,6 +546,7 @@ class TextObject extends DrawingObject {
     'text': text,
     'style': {'fontSize': style.fontSize, 'color': style.color?.value},
     'isSelected': isSelected,
+    'angle': angle
   };
 
   factory TextObject.fromJson(Map<String, dynamic> json) {
@@ -533,6 +562,7 @@ class TextObject extends DrawingObject {
             : Colors.white,
       ),
       isSelected: json['isSelected'] ?? false,
+      angle: json['angle'] ?? 0.0,
     );
   }
 
@@ -543,6 +573,7 @@ class TextObject extends DrawingObject {
     TextStyle? style,
     bool? isSelected,
     bool? isEditing,
+    double? angle,
   }) {
     return TextObject(
       id: id,
@@ -551,6 +582,7 @@ class TextObject extends DrawingObject {
       style: style ?? this.style,
       isSelected: isSelected ?? this.isSelected,
       isEditing: isEditing ?? this.isEditing,
+      angle: angle ?? this.angle,
     );
   }
 }
@@ -566,6 +598,7 @@ class SvgObject extends DrawingObject {
     required this.assetPath,
     required this.pictureInfo,
     super.isSelected,
+    super.angle,
   }) : _rect = rect;
 
   @override
@@ -581,16 +614,18 @@ class SvgObject extends DrawingObject {
     'rect': _rect.toJson(),
     'assetPath': assetPath,
     'isSelected': isSelected,
+    'angle': angle
   };
 
   @override
-  DrawingObject copyWith({Rect? rect, bool? isSelected}) {
+  DrawingObject copyWith({Rect? rect, bool? isSelected, double? angle}) {
     return SvgObject(
       id: id,
       rect: rect ?? _rect,
       assetPath: assetPath,
       pictureInfo: pictureInfo,
       isSelected: isSelected ?? this.isSelected,
+      angle: angle ?? this.angle,
     );
   }
 }
