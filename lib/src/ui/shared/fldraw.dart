@@ -85,7 +85,7 @@ class _FlDrawState extends State<FlDraw> {
       ],
       child: ShadcnApp(
         theme: ThemeData(colorScheme: ColorSchemes.darkDefaultColor, radius: 0.7),
-        home: widget.child,
+        home: DrawerOverlay(child: widget.child),
       ),
     );
   }
