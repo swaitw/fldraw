@@ -1065,10 +1065,22 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       object = existingObject;
       _selectionBloc.add(SelectionReplaced(drawingObjectIds: {object.id}));
     } else {
+      const initialText = 'Text';
+      const initialStyle = TextStyle(fontSize: 16, color: Colors.white);
+
+      final textPainter = TextPainter(
+        text: const TextSpan(text: initialText, style: initialStyle),
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final initialSize = textPainter.size;
+
       object = TextObject(
         id: const Uuid().v4(),
-        rect: Rect.fromLTWH(at!.dx, at.dy, 60, 20),
-        text: 'Text',
+        rect: Rect.fromLTWH(
+            at!.dx, at.dy, initialSize.width + 4, initialSize.height + 4),
+        text: initialText,
+        style: initialStyle,
       );
       _canvasBloc.add(DrawingObjectAdded(object));
       _selectionBloc.add(SelectionReplaced(drawingObjectIds: {object.id}));
@@ -1158,24 +1170,24 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
             Positioned(
               left: globalPosition.dx,
               top: globalPosition.dy,
-              width: max(100, screenSize.width),
-              height: max(30, screenSize.height),
               child: Material(
                 color: Colors.transparent,
-                child: TextField(
-                  controller: textEditingController,
-                  focusNode: focusNode,
-                  style: object.style.copyWith(
-                    fontSize: object.style.fontSize! * zoom,
+                child: IntrinsicWidth(
+                  child: TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    style: object.style.copyWith(
+                      fontSize: object.style.fontSize! * zoom,
+                    ),
+                    maxLines: 1,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _submitAndClose(),
                   ),
-                  maxLines: null,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    isDense: true,
-                  ),
-                  onSubmitted: (_) => _submitAndClose(),
                 ),
               ),
             ),
