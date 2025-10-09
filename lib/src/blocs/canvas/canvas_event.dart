@@ -119,6 +119,12 @@ final class ObjectsResizeEnded extends CanvasEvent {
   String get description => 'Resized object(s)';
 }
 
+final class ObjectsRotationEnded extends CanvasEvent {
+  const ObjectsRotationEnded() : super(isUndoable: true);
+  @override
+  String get description => 'Rotated object(s)';
+}
+
 final class NodeValueUpdated extends CanvasEvent {
   final String nodeId;
   final String value;

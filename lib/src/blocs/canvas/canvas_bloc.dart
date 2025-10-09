@@ -25,6 +25,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
         ObjectsDragEnded e => _onObjectsDragEnded(e, emit),
         DrawingObjectUpdated e => _onDrawingObjectUpdated(e, emit),
         ObjectsResizeEnded e => _onObjectsResizeEnded(e, emit),
+        ObjectsRotationEnded e => _onObjectsRotationEnded(e, emit),
         NodeValueUpdated e => _onNodeValueUpdated(e, emit),
         NodeHeadingUpdated e => _onNodeHeadingUpdated(e, emit),
         NodeToggled e => _onNodeToggled(e, emit),
@@ -138,6 +139,14 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
     // This event IS undoable. We push the current state to the undo stack.
     _pushToUndoStack(event, emit, state);
   }
+
+  void _onObjectsRotationEnded(
+      ObjectsRotationEnded event,
+      Emitter<CanvasState> emit,
+      ) {
+    _pushToUndoStack(event, emit, state);
+  }
+
 
   void _onDrawingObjectUpdated(
     DrawingObjectUpdated event,
