@@ -84,7 +84,7 @@ class _FlDrawState extends State<FlDraw> {
         BlocProvider.value(value: _toolBloc),
       ],
       child: ShadcnApp(
-        theme: ThemeData(colorScheme: ColorSchemes.darkZinc(), radius: 0.7),
+        theme: ThemeData(colorScheme: ColorSchemes.darkDefaultColor, radius: 0.7),
         home: widget.child,
       ),
     );

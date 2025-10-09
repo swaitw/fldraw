@@ -241,6 +241,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   }
 
   void _onPointerSignal(PointerSignalEvent event) {
+    if (_isPanning) return;
     if (event is PointerScrollEvent) {
       final state = _canvasBloc.state;
       final zoomDelta = -event.scrollDelta.dy * 0.001;
