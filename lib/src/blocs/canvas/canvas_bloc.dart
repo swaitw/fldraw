@@ -16,6 +16,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
   CanvasBloc() : super(const CanvasState()) {
     on<CanvasEvent>((event, emit) async {
       return (switch (event) {
+        CanvasTransformed e => _onCanvasTransformed(e, emit),
         CanvasPanned e => _onCanvasPanned(e, emit),
         CanvasZoomed e => _onCanvasZoomed(e, emit),
         NodeAdded e => _onNodeAdded(e, emit),
@@ -93,6 +94,13 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       newUndoStack.removeAt(0);
     }
     emit(state.copyWith(undoStack: newUndoStack, redoStack: []));
+  }
+
+  void _onCanvasTransformed(CanvasTransformed event, Emitter<CanvasState> emit) {
+    emit(state.copyWith(
+      viewportZoom: event.zoom,
+      viewportOffset: event.offset,
+    ));
   }
 
   void _onCanvasPanned(CanvasPanned event, Emitter<CanvasState> emit) {

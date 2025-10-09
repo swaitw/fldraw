@@ -97,7 +97,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   SnapPoint? _hoveredSnapPoint;
   SnapPoint? _startSnapPoint;
 
-  late final ScaleGestureRecognizer _trackpadGestureRecognizer;
+  int _activePointers = 0;
+  double _scaleStartZoom = 1.0;
+  bool _isScaling = false;
 
   Offset get offset => _canvasBloc.state.viewportOffset;
 
@@ -109,16 +111,10 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     _canvasBloc = context.read<CanvasBloc>();
     _selectionBloc = context.read<SelectionBloc>();
     _toolBloc = context.read<ToolBloc>();
-
-    _trackpadGestureRecognizer = ScaleGestureRecognizer()
-      ..onStart = ((details) => _onPanStart())
-      ..onUpdate = _onScaleUpdate
-      ..onEnd = ((details) => _onPanEnd());
   }
 
   @override
   void dispose() {
-    _trackpadGestureRecognizer.dispose();
     _kineticTimer?.cancel();
     super.dispose();
   }
@@ -235,13 +231,51 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     });
   }
 
+  void _onScaleStart(ScaleStartDetails details) {
+    // If there's more than one pointer, it's a genuine multi-touch gesture.
+    if (details.pointerCount > 1) {
+      _isScaling = true; // Set the flag to lock single-finger moves.
+
+      // Immediately cancel any single-finger actions that might have started.
+      setState(() {
+        _isAreaSelecting = false;
+        _isDrawing = false;
+        _tempDrawingObject = null;
+        _selectionArea = Rect.zero;
+      });
+
+      _scaleStartZoom = _canvasBloc.state.viewportZoom;
+      _onPanStart();
+    }
+  }
+
   void _onScaleUpdate(ScaleUpdateDetails details) {
+    if (details.pointerCount < 2) return;
+
     final state = _canvasBloc.state;
-    if (details.scale != 1.0) {
-      final newZoom = state.viewportZoom * details.scale;
-      _canvasBloc.add(CanvasZoomed(newZoom.clamp(0.1, 10.0)));
-    } else if (details.focalPointDelta.distanceSquared > 0) {
-      _onPanUpdate(details.focalPointDelta);
+
+    final newZoom = (_scaleStartZoom * details.scale).clamp(0.1, 10.0);
+    final panDelta = details.focalPointDelta;
+
+    final editorBounds = getEditorBoundsInScreen(kNodeEditorWidgetKey);
+    if (editorBounds == null) return;
+
+    final focalPointOnScreen = details.focalPoint;
+    final focalPointRelativeToCenter = focalPointOnScreen - editorBounds.center;
+
+    final zoomPanCorrection =
+        focalPointRelativeToCenter * (1 / newZoom - 1 / state.viewportZoom);
+
+    final newOffset =
+        state.viewportOffset + (panDelta / state.viewportZoom) + zoomPanCorrection;
+
+    _canvasBloc.add(CanvasTransformed(zoom: newZoom, offset: newOffset));
+  }
+
+  void _onScaleEnd(ScaleEndDetails details) {
+    if (_isScaling) {
+      _isScaling = false;
+      _onPanEnd();
     }
   }
 
@@ -274,6 +308,18 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   }
 
   void _onPointerDown(PointerDownEvent event) {
+    _activePointers++;
+
+    if (_activePointers > 1) {
+      setState(() {
+        _isAreaSelecting = false;
+        _isDrawing = false;
+        _tempDrawingObject = null;
+        _selectionArea = Rect.zero;
+      });
+      return;
+    }
+
     _lastFocalPoint = event.position;
     final worldPos = screenToWorld(
       event.position,
@@ -301,6 +347,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   }
 
   void _onPointerMove(PointerMoveEvent event) {
+    if (_isScaling) return;
     if (_isPanning) {
       _onPanUpdate(event.delta);
       return;
@@ -341,6 +388,8 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   }
 
   void _onPointerUp(PointerUpEvent event) {
+    _activePointers = (_activePointers - 1).clamp(0, 10);
+
     if (_isPanning) _onPanEnd();
     if (_isAreaSelecting) _finalizeAreaSelection();
     if (_isDrawing) _finalizeDrawing();
@@ -361,6 +410,19 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     _isDraggingSelection = false;
     _isResizing = (objectId: '', handle: Handle.none);
     _originalResizeRect = null;
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    _activePointers = (_activePointers - 1).clamp(0, 10);
+    setState(() {
+      _isAreaSelecting = false;
+      _isDrawing = false;
+      _tempDrawingObject = null;
+      _selectionArea = Rect.zero;
+      _isResizing = (objectId: '', handle: Handle.none);
+      _isDraggingSelection = false;
+      _isRotating = false;
+    });
   }
 
   void _beginRotation(Offset worldPos) {
@@ -1272,7 +1334,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
                 final Widget canvasChild = RepaintBoundary(
                   child: ShaderBuilder(
                     assetKey: widget.fragmentShader,
-                    (context, gridShader, child) =>
+                        (context, gridShader, child) =>
                         FlDrawEditorRenderObjectWidget(
                           key: kNodeEditorWidgetKey,
                           canvasState: canvasState,
@@ -1288,24 +1350,16 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
                   ),
                 );
 
-                final platform = PlatformInfoImpl();
-                if (platform.isAndroid || platform.isIOS) {
-                  return GestureDetector(
-                    onTap: () => _selectionBloc.add(SelectionCleared()),
-                    child: canvasChild,
-                  );
-                }
-
                 return KeyboardWidget(
                   bindings: [
                     KeyAction(
                       LogicalKeyboardKey.delete,
                       "Remove selected items",
-                      () => _canvasBloc.add(
+                          () => _canvasBloc.add(
                         ObjectsRemoved(
                           nodeIds: selectionState.selectedNodeIds,
                           drawingObjectIds:
-                              selectionState.selectedDrawingObjectIds,
+                          selectionState.selectedDrawingObjectIds,
                         ),
                       ),
                     ),
@@ -1423,7 +1477,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
                     KeyAction(
                       LogicalKeyboardKey.keyF,
                       "Select Figure Tool",
-                      () =>
+                          () =>
                           _toolBloc.add(const ToolSelected(EditorTool.figure)),
                     ),
                   ],
@@ -1440,25 +1494,27 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
                     onExit: (event) {
                       if (_hoveredHandle.handle != Handle.none) {
                         setState(
-                          () => _hoveredHandle = (
-                            objectId: '',
-                            handle: Handle.none,
+                              () => _hoveredHandle = (
+                          objectId: '',
+                          handle: Handle.none,
                           ),
                         );
                       }
                     },
-                    child: ImprovedListener(
-                      behavior: HitTestBehavior.translucent,
-                      onDoubleClick: _onDoubleClick,
-                      onPointerPressed: _onPointerDown,
-                      onPointerMoved: _onPointerMove,
-                      onPointerReleased: _onPointerUp,
-                      onPointerSignalReceived: _onPointerSignal,
-                      onPointerPanZoomStart:
-                          _toolBloc.state.activeTool == EditorTool.arrow
-                          ? _trackpadGestureRecognizer.addPointerPanZoom
-                          : null,
-                      child: canvasChild,
+                    child: GestureDetector(
+                      onScaleStart: _onScaleStart,
+                      onScaleUpdate: _onScaleUpdate,
+                      onScaleEnd: _onScaleEnd,
+                      child: Listener(
+                        behavior: HitTestBehavior.translucent,
+                        onPointerDown: _onPointerDown,
+                        onPointerMove: _onPointerMove,
+                        onPointerUp: _onPointerUp,
+                        onPointerCancel: _onPointerCancel,
+                        onPointerSignal: _onPointerSignal,
+                        child: canvasChild,
+                      ),
+
                     ),
                   ),
                 );

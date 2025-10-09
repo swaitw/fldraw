@@ -10,7 +10,20 @@ sealed class CanvasEvent extends Equatable {
   List<Object?> get props => [isUndoable];
 }
 
-// --- Viewport Events ---
+final class CanvasTransformed extends CanvasEvent {
+  final double zoom;
+  final Offset offset;
+
+  const CanvasTransformed({required this.zoom, required this.offset})
+      : super(isUndoable: false);
+
+  @override
+  String get description => 'Transformed Canvas';
+
+  @override
+  List<Object> get props => [zoom, offset];
+}
+
 final class CanvasPanned extends CanvasEvent {
   final Offset delta;
 
