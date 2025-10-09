@@ -779,7 +779,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
             newObject = LineObject(
               id: id,
               start: _drawingStart,
-              end: _tempDrawingObject!.end,
+              end: endPos,
+              startAttachment: startAttachment,
+              endAttachment: endAttachment,
             );
             break;
           case EditorTool.figure:
@@ -827,6 +829,18 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       }
     }
 
+    if (_hoveredSnapPoint != null && (object is LineObject)) {
+      final endAttachment = ObjectAttachment(
+        objectId: _hoveredSnapPoint!.objectId,
+        relativePosition: _hoveredSnapPoint!.relativePosition,
+      );
+      if (_isResizing.handle == Handle.arrowEnd) {
+        finalObject = (object).copyWith(endAttachment: endAttachment);
+      } else if (_isResizing.handle == Handle.arrowStart) {
+        finalObject = (object).copyWith(startAttachment: endAttachment);
+      }
+    }
+
     if (finalObject.rect.width < 0 || finalObject.rect.height < 0) {
       finalObject = (finalObject as dynamic).copyWith(
         rect: finalObject.rect.normalize,
@@ -836,24 +850,65 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     _canvasBloc.add(DrawingObjectUpdated(finalObject));
   }
 
+  (Offset, Offset) _getDynamicEndpoints(DrawingObject obj) {
+    if (obj is! ArrowObject && obj is! LineObject) {
+      return (Offset.zero, Offset.zero);
+    }
+    dynamic objectWithEndpoints = obj;
+    var start = objectWithEndpoints.start as Offset;
+    var end = objectWithEndpoints.end as Offset;
+    final startAttachment =
+    objectWithEndpoints.startAttachment as ObjectAttachment?;
+    final endAttachment = objectWithEndpoints.endAttachment as ObjectAttachment?;
+    final canvasState = _canvasBloc.state;
+
+    if (startAttachment != null) {
+      final targetNode = canvasState.nodes[startAttachment.objectId];
+      final targetObject = canvasState.drawingObjects[startAttachment.objectId];
+      final Rect? targetRect =
+      targetNode != null ? getNodeBoundsInWorld(targetNode) : targetObject?.rect;
+
+      if (targetRect != null) {
+        final relPos = startAttachment.relativePosition;
+        start = targetRect.topLeft +
+            Offset(
+              targetRect.width * relPos.dx,
+              targetRect.height * relPos.dy,
+            );
+      }
+    }
+
+    if (endAttachment != null) {
+      final targetNode = canvasState.nodes[endAttachment.objectId];
+      final targetObject = canvasState.drawingObjects[endAttachment.objectId];
+      final Rect? targetRect =
+      targetNode != null ? getNodeBoundsInWorld(targetNode) : targetObject?.rect;
+
+      if (targetRect != null) {
+        final relPos = endAttachment.relativePosition;
+        end = targetRect.topLeft +
+            Offset(
+              targetRect.width * relPos.dx,
+              targetRect.height * relPos.dy,
+            );
+      }
+    }
+    return (start, end);
+  }
+
   String? _findHitObject(Offset worldPos) {
     final canvasState = _canvasBloc.state;
     final tolerance = 8.0 / canvasState.viewportZoom;
 
     for (final obj in canvasState.drawingObjects.values.toList().reversed) {
       if (obj is ArrowObject) {
-        final start = (obj as dynamic).start;
-        final end = (obj as dynamic).end;
-        final dx = end.dx - start.dx;
-        final dy = end.dy - start.dy;
-        final cornerPoint = (dx.abs() > dy.abs())
-            ? Offset(end.dx, start.dy)
-            : Offset(start.dx, end.dy);
-
-        final controlPoint = (obj as dynamic).midPoint ?? cornerPoint;
+        final (start, end) = _getDynamicEndpoints(obj);
+        final controlPoint = obj.midPoint ?? (start + end) / 2;
 
         Path path;
         if (obj.pathType == LinkPathType.orthogonal) {
+          final dx = end.dx - start.dx;
+          final dy = end.dy - start.dy;
           path = Path();
           path.moveTo(start.dx, start.dy);
           if (dx.abs() > dy.abs()) {
@@ -878,15 +933,8 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           return obj.id;
         }
       } else if (obj is LineObject) {
-        final start = (obj as dynamic).start;
-        final end = (obj as dynamic).end;
-        final dx = end.dx - start.dx;
-        final dy = end.dy - start.dy;
-        final cornerPoint = (dx.abs() > dy.abs())
-            ? Offset(end.dx, start.dy)
-            : Offset(start.dx, end.dy);
-
-        final controlPoint = (obj as dynamic).midPoint ?? cornerPoint;
+        final (start, end) = _getDynamicEndpoints(obj);
+        final controlPoint = obj.midPoint ?? (start + end) / 2;
 
         final path = Path()
           ..moveTo(start.dx, start.dy)
