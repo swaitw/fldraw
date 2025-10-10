@@ -208,6 +208,7 @@ class ArrowObject extends DrawingObject {
     'pathType': pathType.name,
     'startAttachment': startAttachment?.toJson(),
     'endAttachment': endAttachment?.toJson(),
+    'midPoint': midPoint?.toJson(),
     'angle': angle
   };
 
@@ -221,6 +222,7 @@ class ArrowObject extends DrawingObject {
       startAttachment: json['startAttachment'] != null ? ObjectAttachment.fromJson(json['startAttachment']) : null,
       endAttachment: json['endAttachment'] != null ? ObjectAttachment.fromJson(json['endAttachment']) : null,
       angle: json['angle'] ?? 0.0,
+      midPoint: json['midPoint'] != null ? JSONOffset.fromJson((json['midPoint'] as List).cast<double>()) : null,
     );
   }
 
@@ -319,7 +321,8 @@ class LineObject extends DrawingObject {
     'isSelected': isSelected,
     'startAttachment': startAttachment?.toJson(),
     'endAttachment': endAttachment?.toJson(),
-    'angle': angle
+    'angle': angle,
+    'midPoint': midPoint?.toJson(),
   };
 
   factory LineObject.fromJson(Map<String, dynamic> json) {
@@ -335,6 +338,7 @@ class LineObject extends DrawingObject {
           ? ObjectAttachment.fromJson(json['endAttachment'])
           : null,
       angle: json['angle'] ?? 0.0,
+      midPoint: json['midPoint'] != null ? JSONOffset.fromJson((json['midPoint'] as List).cast<double>()) : null,
     );
   }
 
