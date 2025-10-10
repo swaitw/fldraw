@@ -100,6 +100,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
   int _activePointers = 0;
   double _scaleStartZoom = 1.0;
   bool _isScaling = false;
+  double _totalDragDelta = 0.0;
 
   Offset get offset => _canvasBloc.state.viewportOffset;
 
@@ -418,6 +419,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           dragDelta,
         ),
       );
+      _totalDragDelta += event.delta.distance;
     } else if (_isAreaSelecting) {
       setState(
             () => _selectionArea = Rect.fromPoints(_selectionStart, worldPos),
@@ -446,7 +448,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     }
 
     if (_isDraggingSelection) {
-      _canvasBloc.add(const ObjectsDragEnded());
+      if (_totalDragDelta > 3.0) {
+        _canvasBloc.add(const ObjectsDragEnded());
+      }
     }
     _isRotating = false;
     _isDraggingSelection = false;
@@ -556,6 +560,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           );
         }
       }
+      _totalDragDelta = 0.0;
       _isDraggingSelection = true;
       return;
     }
