@@ -33,7 +33,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late List<String> svgs;
-  FlDrawController? controller;
+  FlDrawController controller = FlDrawController();
 
   @override
   void initState() {
@@ -63,7 +63,7 @@ SubmitButton -> Instructions
       final jsonString = parser.parse(fldrawCode);
 
       final projectData = jsonDecode(jsonString);
-      controller?.loadProject(projectData);
+      controller.loadProject(projectData);
     } on FormatException catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -76,9 +76,7 @@ SubmitButton -> Instructions
     return Scaffold(
       backgroundColor: Colors.black,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: controller == null
-          ? SizedBox()
-          : Row(
+      floatingActionButton: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Padding(
@@ -88,18 +86,13 @@ SubmitButton -> Instructions
                       maxHeight: 250,
                       maxWidth: 250,
                     ),
-                    child: HistoryPanel(controller: controller!),
+                    child: HistoryPanel(controller: controller),
                   ),
                 ),
               ],
             ),
       body: FlDraw(
-        onControllerCreated: (controller) {
-          this.controller = controller;
-          Future.delayed(Duration.zero, () {
-            setState(() {});
-          });
-        },
+        controller: controller,
         onCanvasStateChanged: (state) {
           print("====== CANVAS ======");
           print(state.drawingObjects);
