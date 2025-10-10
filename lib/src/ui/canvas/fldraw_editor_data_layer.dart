@@ -307,6 +307,44 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     _startKineticTimer();
   }
 
+  bool _checkAndHandleQuickAction(Offset worldPos) {
+    final selection = _selectionBloc.state;
+    if (selection.selectedDrawingObjectIds.length != 1) {
+      return false;
+    }
+
+    final objectId = selection.selectedDrawingObjectIds.first;
+    final object = _canvasBloc.state.drawingObjects[objectId];
+    if (object == null || !(object is RectangleObject || object is CircleObject)) {
+      return false;
+    }
+
+    final double handleSize = 24.0 / zoom;
+    final double halfHandle = handleSize / 2;
+    final double spacing = 12.0 / zoom;
+
+    final localPositions = {
+      QuickActionDirection.top: object.rect.topCenter - Offset(0, spacing + halfHandle),
+      QuickActionDirection.right: object.rect.centerRight + Offset(spacing + halfHandle, 0),
+      QuickActionDirection.bottom: object.rect.bottomCenter + Offset(0, spacing + halfHandle),
+      QuickActionDirection.left: object.rect.centerLeft - Offset(spacing + halfHandle, 0),
+    };
+
+    for (var entry in localPositions.entries) {
+      final direction = entry.key;
+      final localCenter = entry.value;
+
+      final worldCenter = localCenter.rotate(object.rect.center, object.angle);
+
+      if ((worldPos - worldCenter).distance < halfHandle) {
+        _canvasBloc.add(ObjectDuplicatedWithConnection(objectId, direction));
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   void _onPointerDown(PointerDownEvent event) {
     _activePointers++;
 
@@ -327,6 +365,10 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
       _canvasBloc.state.viewportZoom,
     );
     if (worldPos == null) return;
+
+    if (_checkAndHandleQuickAction(worldPos)) {
+      return;
+    }
 
     final tool = _toolBloc.state.activeTool;
 
@@ -563,59 +605,75 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
     final object = _canvasBloc.state.drawingObjects[objectId];
     if (object == null || _originalResizeRect == null) return;
 
-    if (object is ArrowObject || object is LineObject) {
-      dynamic lineObject = object;
-      final start = lineObject.start;
-      final end = lineObject.end;
-      if (handle == Handle.arrowStart) {
-        final updatedObject = lineObject.copyWith(start: worldPos);
+    if (object is ArrowObject) {
+      final (start, end) = _getDynamicEndpoints(object);
+      final pathType = object.pathType;
+
+      if (pathType == LinkPathType.orthogonal) {
+        Offset newStart = start;
+        Offset newEnd = end;
+
+        if (handle == Handle.arrowStart || handle == Handle.arrowEnd) {
+          final referencePoint = handle == Handle.arrowStart ? start : end;
+          final dragDelta = worldPos - referencePoint;
+          if (dragDelta.dx.abs() > dragDelta.dy.abs()) {
+            if (handle == Handle.arrowStart) {
+              newStart = Offset(worldPos.dx, start.dy);
+            } else {
+              newEnd = Offset(worldPos.dx, end.dy);
+            }
+          } else {
+            if (handle == Handle.arrowStart) {
+              newStart = Offset(start.dx, worldPos.dy);
+            } else {
+              newEnd = Offset(end.dx, worldPos.dy);
+            }
+          }
+        }
+
+        else if (handle == Handle.midPoint) {
+          final dx = end.dx - start.dx;
+          final dy = end.dy - start.dy;
+          if (dx.abs() > dy.abs()) {
+            newStart = Offset(start.dx, worldPos.dy);
+            newEnd = Offset(worldPos.dx, end.dy);
+          } else {
+            newStart = Offset(worldPos.dx, start.dy);
+            newEnd = Offset(end.dx, worldPos.dy);
+          }
+        }
+
+        final updatedObject = object.copyWith(start: newStart, end: newEnd);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      } else if (handle == Handle.arrowEnd) {
-        final updatedObject = lineObject.copyWith(end: worldPos);
+
+      }  else {
+        if (handle == Handle.arrowStart) {
+          final updatedObject = object.copyWith(start: worldPos);
+          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
+        } else if (handle == Handle.arrowEnd) {
+          final updatedObject = object.copyWith(end: worldPos);
+          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
+        } else if (handle == Handle.midPoint) {
+          final midPoint = (worldPos * 2) - (start * 0.5) - (end * 0.5);
+          final updatedObject = object.copyWith(midPoint: midPoint);
+          _canvasBloc.add(DrawingObjectUpdated(updatedObject));
+        }
+      }
+      return;
+    } else if (object is LineObject) {
+      final (start, end) = _getDynamicEndpoints(object);
+
+      if (_isResizing.handle == Handle.arrowStart) {
+        final updatedObject = object.copyWith(start: worldPos);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
-      } else if (handle == Handle.midPoint) {
+      } else if (_isResizing.handle == Handle.arrowEnd) {
+        final updatedObject = object.copyWith(end: worldPos);
+        _canvasBloc.add(DrawingObjectUpdated(updatedObject));
+      } else if (_isResizing.handle == Handle.midPoint) {
         final midPoint = (worldPos * 2) - (start * 0.5) - (end * 0.5);
-        final updatedObject = lineObject.copyWith(midPoint: midPoint);
+        final updatedObject = object.copyWith(midPoint: midPoint);
         _canvasBloc.add(DrawingObjectUpdated(updatedObject));
       }
-    } else if (object is TextObject) {
-      if (_originalResizeRect!.width <= 0 || _originalResizeRect!.height <= 0) {
-        return;
-      }
-
-      final Offset anchor;
-      switch (handle) {
-        case Handle.topLeft:
-          anchor = _originalResizeRect!.bottomRight;
-          break;
-        case Handle.topRight:
-          anchor = _originalResizeRect!.bottomLeft;
-          break;
-        case Handle.bottomRight:
-          anchor = _originalResizeRect!.topLeft;
-          break;
-        case Handle.bottomLeft:
-          anchor = _originalResizeRect!.topRight;
-          break;
-        default:
-          return;
-      }
-
-      final aspectRatio =
-          _originalResizeRect!.width / _originalResizeRect!.height;
-      final newRect = _resizeWithAspectRatio(
-        worldPos: worldPos,
-        originalAspectRatio: aspectRatio,
-        anchor: anchor,
-      );
-
-      if (newRect.shortestSide < 10.0) return;
-
-      final updatedObject = object.copyWith(
-        rect: newRect,
-        style: object.style.copyWith(fontSize: newRect.height * 0.8),
-      );
-      _canvasBloc.add(DrawingObjectUpdated(updatedObject));
     } else if (object is RectangleObject ||
         object is CircleObject ||
         object is FigureObject ||
@@ -662,11 +720,9 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
               localDragVector.dy.abs() * aspectRatio * localDragVector.dx.sign,
               localDragVector.dy);
         }
-        // Re-rotate the constrained vector back to world space
         dragVector = localDragVector.rotate(Offset.zero, object.angle);
       }
 
-      // 5. The new center is the midpoint of the new world-space diagonal
       final newCenter = anchorWorld + dragVector / 2;
       final newRect = Rect.fromCenter(
         center: newCenter,
@@ -674,7 +730,6 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
         height: localDragVector.dy.abs(),
       );
 
-      // 6. Update the object
       dynamic updatedObject;
       if (object is TextObject) {
         if (newRect.shortestSide < 10.0) return;
@@ -872,7 +927,6 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
 
     dynamic finalObject = object;
 
-    // Check if the end of the resize lands on a snap point
     if (_hoveredSnapPoint != null && (object is ArrowObject)) {
       final endAttachment = ObjectAttachment(
         objectId: _hoveredSnapPoint!.objectId,
@@ -1081,12 +1135,13 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           obj is TextObject ||
           obj is SvgObject ||
           obj is PencilStrokeObject) {
-
         final center = obj.rect.center;
         final translatedPos = worldPos - center;
         final rotatedPos = Offset(
-          translatedPos.dx * cos(-obj.angle) - translatedPos.dy * sin(-obj.angle),
-          translatedPos.dx * sin(-obj.angle) + translatedPos.dy * cos(-obj.angle),
+          translatedPos.dx * cos(-obj.angle) -
+              translatedPos.dy * sin(-obj.angle),
+          translatedPos.dx * sin(-obj.angle) +
+              translatedPos.dy * cos(-obj.angle),
         );
         final localPos = rotatedPos + center;
 
@@ -1104,23 +1159,22 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
             if (distance < handleHitAreaRadius) {
               if (_hoveredHandle.objectId != objectId ||
                   _hoveredHandle.handle != entry.key) {
-                setState(
-                        () => _hoveredHandle = (objectId: objectId, handle: entry.key));
+                setState(() =>
+                _hoveredHandle = (objectId: objectId, handle: entry.key));
               }
             } else {
               if (_hoveredHandle.objectId != objectId ||
                   _hoveredHandle.handle != Handle.rotate) {
-                setState(
-                        () => _hoveredHandle = (objectId: objectId, handle: Handle.rotate));
+                setState(() => _hoveredHandle =
+                (objectId: objectId, handle: Handle.rotate));
               }
             }
             return;
           }
         }
       } else if (obj is ArrowObject) {
-        final start = (obj as dynamic).start;
-        final end = (obj as dynamic).end;
-        final midPoint = (obj as dynamic).midPoint ?? (start + end) / 2.0;
+        final (start, end) = _getDynamicEndpoints(obj);
+        final midPoint = obj.midPoint ?? (start + end) / 2.0;
 
         final dx = end.dx - start.dx;
         final dy = end.dy - start.dy;
@@ -1146,16 +1200,15 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
             if (_hoveredHandle.objectId != objectId ||
                 _hoveredHandle.handle != entry.key) {
               setState(
-                () => _hoveredHandle = (objectId: objectId, handle: entry.key),
+                    () => _hoveredHandle = (objectId: objectId, handle: entry.key),
               );
             }
             return;
           }
         }
       } else if (obj is LineObject) {
-        final start = (obj as dynamic).start;
-        final end = (obj as dynamic).end;
-        final midPoint = (obj as dynamic).midPoint ?? (start + end) / 2.0;
+        final (start, end) = _getDynamicEndpoints(obj);
+        final midPoint = obj.midPoint ?? (start + end) / 2.0;
         final onCurveMidPoint =
             (start * 0.25) + (midPoint * 0.5) + (end * 0.25);
         final handles = {
@@ -1168,7 +1221,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
             if (_hoveredHandle.objectId != objectId ||
                 _hoveredHandle.handle != entry.key) {
               setState(
-                () => _hoveredHandle = (objectId: objectId, handle: entry.key),
+                    () => _hoveredHandle = (objectId: objectId, handle: entry.key),
               );
             }
             return;
@@ -1577,7 +1630,7 @@ class _FlDrawEditorDataLayerState extends State<FlDrawEditorDataLayer>
           return SystemMouseCursors.resizeColumn;
         case Handle.midPoint:
           return SystemMouseCursors.grab;
-        case Handle.rotate: // Add this case
+        case Handle.rotate:
           return SystemMouseCursors.alias;
         default:
           return SystemMouseCursors.basic;

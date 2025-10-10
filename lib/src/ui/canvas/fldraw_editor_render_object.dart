@@ -445,6 +445,10 @@ class FlDrawEditorRenderBox extends RenderBox
             canvas.drawCircle(corner, handleHitAreaRadius, handleHitAreaPaint);
             canvas.drawCircle(corner, visibleHandleRadius, handlePaint);
           }
+
+          if (selectionState.selectedDrawingObjectIds.length == 1 && (obj is RectangleObject || obj is CircleObject)) {
+            _paintQuickActionArrows(canvas, obj.rect);
+          }
         }
 
         canvas.restore();
@@ -650,6 +654,68 @@ class FlDrawEditorRenderBox extends RenderBox
         }
         continue;
       }
+    }
+  }
+
+  void _paintQuickActionArrows(Canvas canvas, Rect rect) {
+    final double baseHandleSize = 20.0;
+    final double handleSize = baseHandleSize / sqrt(zoom);
+    final double halfHandle = handleSize / 2;
+    final double spacing = 10.0 / sqrt(zoom);
+
+    final Paint handlePaint = Paint()..color = Colors.blue.withOpacity(0.8);
+    final Paint arrowPaint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5 / zoom
+      ..strokeCap = StrokeCap.round;
+
+    final positions = {
+      'top': rect.topCenter - Offset(0, spacing + halfHandle),
+      'right': rect.centerRight + Offset(spacing + halfHandle, 0),
+      'bottom': rect.bottomCenter + Offset(0, spacing + halfHandle),
+      'left': rect.centerLeft - Offset(spacing + halfHandle, 0),
+    };
+
+    for (var entry in positions.entries) {
+      final center = entry.value;
+      final handleRect =
+      Rect.fromCenter(center: center, width: handleSize, height: handleSize);
+      canvas.drawOval(handleRect, handlePaint);
+
+      final Path arrowPath = Path();
+      final arrowSize = handleSize * 0.3;
+      switch (entry.key) {
+        case 'top':
+          arrowPath.moveTo(center.dx, center.dy - arrowSize);
+          arrowPath.lineTo(center.dx, center.dy + arrowSize);
+          arrowPath.moveTo(center.dx - arrowSize, center.dy);
+          arrowPath.lineTo(center.dx, center.dy - arrowSize);
+          arrowPath.lineTo(center.dx + arrowSize, center.dy);
+          break;
+        case 'right':
+          arrowPath.moveTo(center.dx - arrowSize, center.dy);
+          arrowPath.lineTo(center.dx + arrowSize, center.dy);
+          arrowPath.moveTo(center.dx, center.dy - arrowSize);
+          arrowPath.lineTo(center.dx + arrowSize, center.dy);
+          arrowPath.lineTo(center.dx, center.dy + arrowSize);
+          break;
+        case 'bottom':
+          arrowPath.moveTo(center.dx, center.dy - arrowSize);
+          arrowPath.lineTo(center.dx, center.dy + arrowSize);
+          arrowPath.moveTo(center.dx - arrowSize, center.dy);
+          arrowPath.lineTo(center.dx, center.dy + arrowSize);
+          arrowPath.lineTo(center.dx + arrowSize, center.dy);
+          break;
+        case 'left':
+          arrowPath.moveTo(center.dx - arrowSize, center.dy);
+          arrowPath.lineTo(center.dx + arrowSize, center.dy);
+          arrowPath.moveTo(center.dx, center.dy - arrowSize);
+          arrowPath.lineTo(center.dx - arrowSize, center.dy);
+          arrowPath.lineTo(center.dx, center.dy + arrowSize);
+          break;
+      }
+      canvas.drawPath(arrowPath, arrowPaint);
     }
   }
 

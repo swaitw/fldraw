@@ -1,5 +1,7 @@
 part of 'canvas_bloc.dart';
 
+enum QuickActionDirection { top, right, bottom, left }
+
 sealed class CanvasEvent extends Equatable {
   final bool isUndoable;
   const CanvasEvent({this.isUndoable = true});
@@ -214,4 +216,17 @@ final class SelectionPasted extends CanvasEvent {
 
   @override
   List<Object> get props => [pastePosition];
+}
+
+final class ObjectDuplicatedWithConnection extends CanvasEvent {
+  final String sourceObjectId;
+  final QuickActionDirection direction;
+
+  const ObjectDuplicatedWithConnection(this.sourceObjectId, this.direction);
+
+  @override
+  String get description => 'Created connected shape';
+
+  @override
+  List<Object> get props => [sourceObjectId, direction];
 }
