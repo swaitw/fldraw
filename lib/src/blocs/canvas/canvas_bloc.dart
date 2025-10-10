@@ -6,6 +6,7 @@ import 'package:fldraw/src/models/drawing_entities.dart';
 import 'package:fldraw/src/models/entities.dart';
 import 'package:flutter/services.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
+import 'package:uuid/uuid.dart';
 
 part 'canvas_event.dart';
 part 'canvas_state.dart';
@@ -38,6 +39,7 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
         SelectionCut e => _onSelectionCut(e, emit),
         SelectionPasted e => _onSelectionPasted(e, emit),
         SelectionCopied e => _onSelectionCopied(e, emit),
+        ObjectDuplicatedWithConnection e => _onObjectDuplicatedWithConnection(e, emit),
       });
     });
   }
@@ -411,4 +413,71 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
   }
 
   void _onSelectionCopied(SelectionCopied e, Emitter<CanvasState> emit) {}
+
+  void _onObjectDuplicatedWithConnection(
+      ObjectDuplicatedWithConnection event, Emitter<CanvasState> emit) {
+    _pushToUndoStack(event, emit, state);
+
+    final sourceObject = state.drawingObjects[event.sourceObjectId];
+    if (sourceObject == null ||
+        !(sourceObject is RectangleObject || sourceObject is CircleObject)) {
+      return;
+    }
+
+    const double spacing = 60.0;
+    final sourceRect = sourceObject.rect;
+
+    late Offset newRectTopLeft;
+    late ObjectAttachment startAttachment;
+    late ObjectAttachment endAttachment;
+
+    switch (event.direction) {
+      case QuickActionDirection.top:
+        newRectTopLeft = sourceRect.topLeft - Offset(0, sourceRect.height + spacing);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 0.0));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 1.0));
+        break;
+      case QuickActionDirection.right:
+        newRectTopLeft = sourceRect.topRight + const Offset(spacing, 0);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(1.0, 0.5));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.0, 0.5));
+        break;
+      case QuickActionDirection.bottom:
+        newRectTopLeft = sourceRect.bottomLeft + Offset(0, spacing);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 1.0));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 0.0));
+        break;
+      case QuickActionDirection.left:
+        newRectTopLeft = sourceRect.topLeft - Offset(sourceRect.width + spacing, 0);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.0, 0.5));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(1.0, 0.5));
+        break;
+    }
+
+    final DrawingObject newShape;
+    final newId = const Uuid().v4();
+    final newObjectRect = newRectTopLeft & sourceRect.size;
+
+    if (sourceObject is RectangleObject) {
+      newShape = RectangleObject(id: newId, rect: newObjectRect);
+    } else if (sourceObject is CircleObject) {
+      newShape = CircleObject(id: newId, rect: newObjectRect);
+    } else {
+      return;
+    }
+
+    final newArrow = ArrowObject(
+      id: const Uuid().v4(),
+      start: sourceRect.center,
+      end: newShape.rect.center,
+      startAttachment: startAttachment.copyWith(objectId: sourceObject.id),
+      endAttachment: endAttachment.copyWith(objectId: newShape.id),
+    );
+
+    final newDrawingObjects = Map<String, DrawingObject>.from(state.drawingObjects)
+      ..[newShape.id] = newShape
+      ..[newArrow.id] = newArrow;
+
+    emit(state.copyWith(drawingObjects: newDrawingObjects));
+  }
 }

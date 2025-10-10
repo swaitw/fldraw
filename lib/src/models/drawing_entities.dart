@@ -681,4 +681,11 @@ class ObjectAttachment extends Equatable {
       relativePosition: Offset(json['relativePosition'][0], json['relativePosition'][1]),
     );
   }
+
+  ObjectAttachment copyWith({String? objectId, Offset? relativePosition}) {
+    return ObjectAttachment(
+      objectId: objectId ?? this.objectId,
+      relativePosition: relativePosition ?? this.relativePosition,
+    );
+  }
 }
