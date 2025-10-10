@@ -28,5 +28,5 @@ export 'package:fldraw/src/models/drawing_entities.dart'
 export 'package:fldraw/src/models/entities.dart'
     show NodeState, NodeInstance, NodeInfo;
 
-export 'package:fldraw/src/core/controller/fldraw_controller_interface.dart';
+export 'package:fldraw/src/core/controller/fldraw_controller.dart';
 export 'package:fldraw/src/core/parser/fldraw_parser.dart';

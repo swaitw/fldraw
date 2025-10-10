@@ -35,7 +35,7 @@ import 'fldraw_controller_interface.dart';
 ///   print('Canvas updated! It now has ${state.nodes.length} nodes.');
 /// });
 /// ```
-class FlDrawControllerImpl implements FlDrawController {
+class FlDrawController implements FlDrawControllerInterface {
   CanvasBloc? _canvasBloc;
   SelectionBloc? _selectionBloc;
   ToolBloc? _toolBloc;

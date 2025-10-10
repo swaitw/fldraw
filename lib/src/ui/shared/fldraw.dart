@@ -7,8 +7,8 @@ import 'package:shadcn_flutter/shadcn_flutter.dart';
 
 class FlDraw extends StatefulWidget {
   final Widget child;
+  final FlDrawController? controller;
   final Function(FlDrawController)? onControllerCreated;
-
   final void Function(CanvasState)? onCanvasStateChanged;
   final void Function(SelectionState)? onSelectionStateChanged;
   final void Function(ToolState)? onToolStateChanged;
@@ -16,6 +16,7 @@ class FlDraw extends StatefulWidget {
   const FlDraw({
     super.key,
     required this.child,
+    this.controller,
     this.onCanvasStateChanged,
     this.onSelectionStateChanged,
     this.onToolStateChanged, this.onControllerCreated,
@@ -26,7 +27,9 @@ class FlDraw extends StatefulWidget {
 }
 
 class _FlDrawState extends State<FlDraw> {
-  FlDrawControllerImpl controller = FlDrawControllerImpl();
+  late final FlDrawController _controller;
+  bool _didCreateController = false;
+
   late final CanvasBloc _canvasBloc;
   late final SelectionBloc _selectionBloc;
   late final ToolBloc _toolBloc;
@@ -42,9 +45,17 @@ class _FlDrawState extends State<FlDraw> {
     _selectionBloc = SelectionBloc();
     _toolBloc = ToolBloc();
 
-    controller.init(_canvasBloc, _selectionBloc, _toolBloc);
-    if(widget.onControllerCreated != null) {
-      widget.onControllerCreated!(controller);
+    if (widget.controller == null) {
+      _controller = FlDrawController();
+      _didCreateController = true;
+    } else {
+      _controller = widget.controller!;
+    }
+
+    _controller.init(_canvasBloc, _selectionBloc, _toolBloc);
+
+    if (widget.onControllerCreated != null) {
+      widget.onControllerCreated!(_controller);
     }
 
     if (widget.onCanvasStateChanged != null) {
@@ -64,7 +75,9 @@ class _FlDrawState extends State<FlDraw> {
 
   @override
   void dispose() {
-    controller.dispose();
+    if (_didCreateController) {
+      _controller.dispose();
+    }
     _canvasSub?.cancel();
     _selectionSub?.cancel();
     _toolSub?.cancel();

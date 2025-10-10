@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:fldraw/fldraw.dart';
 import 'package:flutter/widgets.dart';
 
-abstract class FlDrawController {
+abstract class FlDrawControllerInterface {
   Stream<CanvasState> get canvasStateStream;
 
   CanvasState get canvasState;
