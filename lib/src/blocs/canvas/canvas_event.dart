@@ -1,6 +1,8 @@
 part of 'canvas_bloc.dart';
 
-abstract class CanvasEvent extends Equatable {
+enum QuickActionDirection { top, right, bottom, left }
+
+sealed class CanvasEvent extends Equatable {
   final bool isUndoable;
   const CanvasEvent({this.isUndoable = true});
 
@@ -10,8 +12,21 @@ abstract class CanvasEvent extends Equatable {
   List<Object?> get props => [isUndoable];
 }
 
-// --- Viewport Events ---
-class CanvasPanned extends CanvasEvent {
+final class CanvasTransformed extends CanvasEvent {
+  final double zoom;
+  final Offset offset;
+
+  const CanvasTransformed({required this.zoom, required this.offset})
+      : super(isUndoable: false);
+
+  @override
+  String get description => 'Transformed Canvas';
+
+  @override
+  List<Object> get props => [zoom, offset];
+}
+
+final class CanvasPanned extends CanvasEvent {
   final Offset delta;
 
   const CanvasPanned(this.delta);
@@ -23,7 +38,7 @@ class CanvasPanned extends CanvasEvent {
   List<Object> get props => [delta];
 }
 
-class CanvasZoomed extends CanvasEvent {
+final class CanvasZoomed extends CanvasEvent {
   final double zoom;
 
   const CanvasZoomed(this.zoom);
@@ -36,7 +51,7 @@ class CanvasZoomed extends CanvasEvent {
 }
 
 // --- Object Manipulation Events ---
-class NodeAdded extends CanvasEvent {
+final class NodeAdded extends CanvasEvent {
   final NodeInstance node;
 
   const NodeAdded(this.node);
@@ -48,7 +63,7 @@ class NodeAdded extends CanvasEvent {
   List<Object> get props => [node];
 }
 
-class DrawingObjectAdded extends CanvasEvent {
+final class DrawingObjectAdded extends CanvasEvent {
   final DrawingObject object;
 
   const DrawingObjectAdded(this.object);
@@ -69,7 +84,7 @@ class DrawingObjectAdded extends CanvasEvent {
   List<Object> get props => [object];
 }
 
-class ObjectsRemoved extends CanvasEvent {
+final class ObjectsRemoved extends CanvasEvent {
   final Set<String> nodeIds;
   final Set<String> drawingObjectIds;
 
@@ -85,7 +100,7 @@ class ObjectsRemoved extends CanvasEvent {
   List<Object> get props => [nodeIds, drawingObjectIds];
 }
 
-class ObjectsDragged extends CanvasEvent {
+final class ObjectsDragged extends CanvasEvent {
   final Set<String> objectIds;
   final Offset delta;
 
@@ -95,7 +110,7 @@ class ObjectsDragged extends CanvasEvent {
   List<Object> get props => [objectIds, delta];
 }
 
-class ObjectsDragEnded extends CanvasEvent {
+final class ObjectsDragEnded extends CanvasEvent {
   // This event marks the end of a drag and IS undoable.
   const ObjectsDragEnded() : super(isUndoable: true);
 
@@ -103,7 +118,7 @@ class ObjectsDragEnded extends CanvasEvent {
   String get description => 'Moved object(s)';
 }
 
-class DrawingObjectUpdated extends CanvasEvent {
+final class DrawingObjectUpdated extends CanvasEvent {
   final DrawingObject object;
 
   const DrawingObjectUpdated(this.object);
@@ -112,14 +127,20 @@ class DrawingObjectUpdated extends CanvasEvent {
   List<Object> get props => [object];
 }
 
-class ObjectsResizeEnded extends CanvasEvent {
+final class ObjectsResizeEnded extends CanvasEvent {
   const ObjectsResizeEnded() : super(isUndoable: true);
 
   @override
   String get description => 'Resized object(s)';
 }
 
-class NodeValueUpdated extends CanvasEvent {
+final class ObjectsRotationEnded extends CanvasEvent {
+  const ObjectsRotationEnded() : super(isUndoable: true);
+  @override
+  String get description => 'Rotated object(s)';
+}
+
+final class NodeValueUpdated extends CanvasEvent {
   final String nodeId;
   final String value;
 
@@ -132,7 +153,7 @@ class NodeValueUpdated extends CanvasEvent {
   List<Object> get props => [nodeId];
 }
 
-class NodeHeadingUpdated extends CanvasEvent {
+final class NodeHeadingUpdated extends CanvasEvent {
   final String nodeId;
   final String heading;
 
@@ -145,7 +166,7 @@ class NodeHeadingUpdated extends CanvasEvent {
   List<Object> get props => [nodeId];
 }
 
-class NodeToggled extends CanvasEvent {
+final class NodeToggled extends CanvasEvent {
   final String nodeId;
 
   const NodeToggled(this.nodeId);
@@ -158,12 +179,12 @@ class NodeToggled extends CanvasEvent {
 }
 
 // --- History Events ---
-class UndoRequested extends CanvasEvent {}
+final class UndoRequested extends CanvasEvent {}
 
-class RedoRequested extends CanvasEvent {}
+final class RedoRequested extends CanvasEvent {}
 
 // --- Project Events ---
-class ProjectSaved extends CanvasEvent {
+final class ProjectSaved extends CanvasEvent {
   final Function(Map<String, dynamic>) onSave;
 
   const ProjectSaved({required this.onSave});
@@ -172,7 +193,7 @@ class ProjectSaved extends CanvasEvent {
   List<Object> get props => [onSave];
 }
 
-class ProjectLoaded extends CanvasEvent {
+final class ProjectLoaded extends CanvasEvent {
   final Map<String, dynamic> data;
 
   const ProjectLoaded(this.data);
@@ -181,18 +202,31 @@ class ProjectLoaded extends CanvasEvent {
   List<Object> get props => [data];
 }
 
-class NewProjectCreated extends CanvasEvent {}
+final class NewProjectCreated extends CanvasEvent {}
 
 // --- Clipboard Events ---
-class SelectionCopied extends CanvasEvent {}
+final class SelectionCopied extends CanvasEvent {}
 
-class SelectionCut extends CanvasEvent {}
+final class SelectionCut extends CanvasEvent {}
 
-class SelectionPasted extends CanvasEvent {
+final class SelectionPasted extends CanvasEvent {
   final Offset pastePosition;
 
   const SelectionPasted({required this.pastePosition});
 
   @override
   List<Object> get props => [pastePosition];
+}
+
+final class ObjectDuplicatedWithConnection extends CanvasEvent {
+  final String sourceObjectId;
+  final QuickActionDirection direction;
+
+  const ObjectDuplicatedWithConnection(this.sourceObjectId, this.direction);
+
+  @override
+  String get description => 'Created connected shape';
+
+  @override
+  List<Object> get props => [sourceObjectId, direction];
 }

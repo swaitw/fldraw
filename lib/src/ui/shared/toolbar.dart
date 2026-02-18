@@ -26,7 +26,7 @@ class FlToolbar extends StatelessWidget {
 
       if (tool == EditorTool.add) {
         if (popoverContext == null) return;
-        _showAddPopover(popoverContext);
+        _showAddPopover(context);
       } else {
         toolBloc.add(ToolSelected(tool));
       }
@@ -256,7 +256,6 @@ class FlToolbar extends StatelessWidget {
     showPopover(
       context: context,
       alignment: Alignment.topCenter,
-      offset: const Offset(240, 8),
       builder: (context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {
@@ -312,7 +311,7 @@ class FlToolbar extends StatelessWidget {
                   ),
                 ),
               ),
-            );
+            ).withPadding(top: 16);
           },
         );
       },

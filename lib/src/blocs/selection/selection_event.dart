@@ -1,6 +1,6 @@
 part of 'selection_bloc.dart';
 
-abstract class SelectionEvent extends Equatable {
+sealed class SelectionEvent extends Equatable {
   const SelectionEvent();
 
   @override
@@ -8,7 +8,7 @@ abstract class SelectionEvent extends Equatable {
 }
 
 /// Event to add a set of IDs to the current selection.
-class SelectionObjectsAdded extends SelectionEvent {
+final class SelectionObjectsAdded extends SelectionEvent {
   final Set<String> nodeIds;
   final Set<String> drawingObjectIds;
   // We will add links back in a later phase
@@ -23,7 +23,7 @@ class SelectionObjectsAdded extends SelectionEvent {
 }
 
 /// Event to replace the current selection with a new set of IDs.
-class SelectionReplaced extends SelectionEvent {
+final class SelectionReplaced extends SelectionEvent {
   final Set<String> nodeIds;
   final Set<String> drawingObjectIds;
 
@@ -38,4 +38,4 @@ class SelectionReplaced extends SelectionEvent {
 
 
 /// Event to clear the entire selection.
-class SelectionCleared extends SelectionEvent {}
+final class SelectionCleared extends SelectionEvent {}

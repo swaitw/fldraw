@@ -2,7 +2,7 @@ part of 'canvas_bloc.dart';
 
 typedef HistoryEntry = (CanvasState state, CanvasEvent event);
 
-class CanvasState extends Equatable {
+final class CanvasState extends Equatable {
   final Map<String, NodeInstance> nodes;
   final Map<String, DrawingObject> drawingObjects;
   final Offset viewportOffset;

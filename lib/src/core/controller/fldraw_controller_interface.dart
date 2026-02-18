@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:fldraw/fldraw.dart';
 import 'package:flutter/widgets.dart';
 
-abstract class FlDrawController {
+abstract class FlDrawControllerInterface {
   Stream<CanvasState> get canvasStateStream;
 
   CanvasState get canvasState;
@@ -15,6 +15,18 @@ abstract class FlDrawController {
   Stream<ToolState> get toolStateStream;
 
   ToolState get toolState;
+
+  Map<String, NodeInstance> get nodes;
+
+  Map<String, DrawingObject> get drawingObjects;
+
+  Offset get viewportOffset;
+
+  double get viewportZoom;
+
+  List<HistoryEntry> get undoStack;
+
+  List<HistoryEntry> get redoStack;
 
   // --- Tool Methods ---
 

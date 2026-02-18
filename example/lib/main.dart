@@ -33,7 +33,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   late List<String> svgs;
-  FlDrawController? controller;
+  FlDrawController controller = FlDrawController();
 
   @override
   void initState() {
@@ -43,18 +43,39 @@ class _HomePageState extends State<HomePage> {
 
   void loadFromText() {
     final fldrawCode = """
-    // Define a node, explicitly setting its shape
-LoginNode [shape: node, heading: "User Login", text: "Enter credentials here."]
+   // Vertical workflow with grouped steps
 
-// Define a shape with centered text
-SubmitButton [shape: rect, text: "Submit"]
+start [shape: node, heading: "Start", text: "Begin the process"]
 
-// Define a standalone text object
-Instructions [shape: rect, text: "Please"]
+// Group for input & validation phase
+inputPhase [label: "Input Phase"] {
+  collect [shape: rect, text: "Collect User Info"]
+  validate [shape: node, heading: "Validate", text: "Check Input Data"]
+}
 
-// Relationships still work the same
-LoginNode -> SubmitButton
-SubmitButton -> Instructions
+// Group for processing phase
+processPhase [label: "Processing Phase"] {
+  transform [shape: rect, text: "Transform Data"]
+  compute [shape: node, heading: "Compute", text: "Perform Calculations"]
+  cache [shape: rect, text: "Cache Results"]
+}
+
+// Group for output & cleanup
+outputPhase [label: "Output Phase", figure: true] {
+  save [shape: circle, text: "Save to Database"]
+  notify [shape: node, heading: "Notify", text: "Send Confirmation"]
+  cleanup [shape: rect, text: "Clean Temp Files"]
+}
+
+end [shape: node, heading: "End", text: "Workflow Complete"]
+
+// --- Relationships ---
+start -> inputPhase
+inputPhase -> processPhase
+processPhase -> outputPhase
+outputPhase -> end
+
+start -> outputPhase
   """;
 
     try {
@@ -63,7 +84,8 @@ SubmitButton -> Instructions
       final jsonString = parser.parse(fldrawCode);
 
       final projectData = jsonDecode(jsonString);
-      controller?.loadProject(projectData);
+      controller.loadProject(projectData);
+
     } on FormatException catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -76,9 +98,7 @@ SubmitButton -> Instructions
     return Scaffold(
       backgroundColor: Colors.black,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: controller == null
-          ? SizedBox()
-          : Row(
+      floatingActionButton: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Padding(
@@ -88,17 +108,15 @@ SubmitButton -> Instructions
                       maxHeight: 250,
                       maxWidth: 250,
                     ),
-                    child: HistoryPanel(controller: controller!),
+                    child: HistoryPanel(controller: controller),
                   ),
                 ),
               ],
             ),
       body: FlDraw(
+        controller: controller,
         onControllerCreated: (controller) {
-          this.controller = controller;
-          Future.delayed(Duration.zero, () {
-            setState(() {});
-          });
+          loadFromText();
         },
         onCanvasStateChanged: (state) {
           print("====== CANVAS ======");

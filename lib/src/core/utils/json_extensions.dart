@@ -27,6 +27,15 @@ extension JSONColor on Color {
 extension JSONOffset on Offset {
   static Offset fromJson(List<double> json) => Offset(json[0], json[1]);
 
+  Offset rotate(Offset center, double angle) {
+    final translated = this - center;
+    final rotated = Offset(
+      translated.dx * cos(angle) - translated.dy * sin(angle),
+      translated.dx * sin(angle) + translated.dy * cos(angle),
+    );
+    return rotated + center;
+  }
+
   List<double> toJson() => [dx, dy];
 }
 

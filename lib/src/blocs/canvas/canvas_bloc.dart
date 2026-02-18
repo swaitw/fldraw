@@ -6,6 +6,7 @@ import 'package:fldraw/src/models/drawing_entities.dart';
 import 'package:fldraw/src/models/entities.dart';
 import 'package:flutter/services.dart';
 import 'package:perfect_freehand/perfect_freehand.dart';
+import 'package:uuid/uuid.dart';
 
 part 'canvas_event.dart';
 part 'canvas_state.dart';
@@ -14,25 +15,33 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
   static const int _maxHistoryStack = 100;
 
   CanvasBloc() : super(const CanvasState()) {
-    on<CanvasPanned>(_onCanvasPanned);
-    on<CanvasZoomed>(_onCanvasZoomed);
-    on<NodeAdded>(_onNodeAdded);
-    on<DrawingObjectAdded>(_onDrawingObjectAdded);
-    on<ObjectsRemoved>(_onObjectsRemoved);
-    on<ObjectsDragged>(_onObjectsDragged);
-    on<ObjectsDragEnded>(_onObjectsDragEnded);
-    on<DrawingObjectUpdated>(_onDrawingObjectUpdated);
-    on<ObjectsResizeEnded>(_onObjectsResizeEnded);
-    on<NodeValueUpdated>(_onNodeValueUpdated);
-    on<NodeHeadingUpdated>(_onNodeHeadingUpdated);
-    on<NodeToggled>(_onNodeToggled);
-    on<UndoRequested>(_onUndo);
-    on<RedoRequested>(_onRedo);
-    on<ProjectSaved>(_onProjectSaved);
-    on<ProjectLoaded>(_onProjectLoaded);
-    on<NewProjectCreated>(_onNewProjectCreated);
-    on<SelectionCut>(_onSelectionCut);
-    on<SelectionPasted>(_onSelectionPasted);
+    on<CanvasEvent>((event, emit) async {
+      return (switch (event) {
+        CanvasTransformed e => _onCanvasTransformed(e, emit),
+        CanvasPanned e => _onCanvasPanned(e, emit),
+        CanvasZoomed e => _onCanvasZoomed(e, emit),
+        NodeAdded e => _onNodeAdded(e, emit),
+        DrawingObjectAdded e => _onDrawingObjectAdded(e, emit),
+        ObjectsRemoved e => _onObjectsRemoved(e, emit),
+        ObjectsDragged e => _onObjectsDragged(e, emit),
+        ObjectsDragEnded e => _onObjectsDragEnded(e, emit),
+        DrawingObjectUpdated e => _onDrawingObjectUpdated(e, emit),
+        ObjectsResizeEnded e => _onObjectsResizeEnded(e, emit),
+        ObjectsRotationEnded e => _onObjectsRotationEnded(e, emit),
+        NodeValueUpdated e => _onNodeValueUpdated(e, emit),
+        NodeHeadingUpdated e => _onNodeHeadingUpdated(e, emit),
+        NodeToggled e => _onNodeToggled(e, emit),
+        UndoRequested e => _onUndo(e, emit),
+        RedoRequested e => _onRedo(e, emit),
+        ProjectSaved e => _onProjectSaved(e, emit),
+        ProjectLoaded e => _onProjectLoaded(e, emit),
+        NewProjectCreated e => _onNewProjectCreated(e, emit),
+        SelectionCut e => _onSelectionCut(e, emit),
+        SelectionPasted e => _onSelectionPasted(e, emit),
+        SelectionCopied e => _onSelectionCopied(e, emit),
+        ObjectDuplicatedWithConnection e => _onObjectDuplicatedWithConnection(e, emit),
+      });
+    });
   }
 
   void _emitWithHistory(
@@ -89,6 +98,13 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
     emit(state.copyWith(undoStack: newUndoStack, redoStack: []));
   }
 
+  void _onCanvasTransformed(CanvasTransformed event, Emitter<CanvasState> emit) {
+    emit(state.copyWith(
+      viewportZoom: event.zoom,
+      viewportOffset: event.offset,
+    ));
+  }
+
   void _onCanvasPanned(CanvasPanned event, Emitter<CanvasState> emit) {
     emit(state.copyWith(viewportOffset: state.viewportOffset + event.delta));
   }
@@ -133,6 +149,14 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
     // This event IS undoable. We push the current state to the undo stack.
     _pushToUndoStack(event, emit, state);
   }
+
+  void _onObjectsRotationEnded(
+      ObjectsRotationEnded event,
+      Emitter<CanvasState> emit,
+      ) {
+    _pushToUndoStack(event, emit, state);
+  }
+
 
   void _onDrawingObjectUpdated(
     DrawingObjectUpdated event,
@@ -386,5 +410,74 @@ class CanvasBloc extends Bloc<CanvasEvent, CanvasState> {
       }
       emit(state.copyWith(nodes: newNodes));
     }
+  }
+
+  void _onSelectionCopied(SelectionCopied e, Emitter<CanvasState> emit) {}
+
+  void _onObjectDuplicatedWithConnection(
+      ObjectDuplicatedWithConnection event, Emitter<CanvasState> emit) {
+    _pushToUndoStack(event, emit, state);
+
+    final sourceObject = state.drawingObjects[event.sourceObjectId];
+    if (sourceObject == null ||
+        !(sourceObject is RectangleObject || sourceObject is CircleObject)) {
+      return;
+    }
+
+    const double spacing = 60.0;
+    final sourceRect = sourceObject.rect;
+
+    late Offset newRectTopLeft;
+    late ObjectAttachment startAttachment;
+    late ObjectAttachment endAttachment;
+
+    switch (event.direction) {
+      case QuickActionDirection.top:
+        newRectTopLeft = sourceRect.topLeft - Offset(0, sourceRect.height + spacing);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 0.0));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 1.0));
+        break;
+      case QuickActionDirection.right:
+        newRectTopLeft = sourceRect.topRight + const Offset(spacing, 0);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(1.0, 0.5));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.0, 0.5));
+        break;
+      case QuickActionDirection.bottom:
+        newRectTopLeft = sourceRect.bottomLeft + Offset(0, spacing);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 1.0));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.5, 0.0));
+        break;
+      case QuickActionDirection.left:
+        newRectTopLeft = sourceRect.topLeft - Offset(sourceRect.width + spacing, 0);
+        startAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(0.0, 0.5));
+        endAttachment = const ObjectAttachment(objectId: '', relativePosition: Offset(1.0, 0.5));
+        break;
+    }
+
+    final DrawingObject newShape;
+    final newId = const Uuid().v4();
+    final newObjectRect = newRectTopLeft & sourceRect.size;
+
+    if (sourceObject is RectangleObject) {
+      newShape = RectangleObject(id: newId, rect: newObjectRect);
+    } else if (sourceObject is CircleObject) {
+      newShape = CircleObject(id: newId, rect: newObjectRect);
+    } else {
+      return;
+    }
+
+    final newArrow = ArrowObject(
+      id: const Uuid().v4(),
+      start: sourceRect.center,
+      end: newShape.rect.center,
+      startAttachment: startAttachment.copyWith(objectId: sourceObject.id),
+      endAttachment: endAttachment.copyWith(objectId: newShape.id),
+    );
+
+    final newDrawingObjects = Map<String, DrawingObject>.from(state.drawingObjects)
+      ..[newShape.id] = newShape
+      ..[newArrow.id] = newArrow;
+
+    emit(state.copyWith(drawingObjects: newDrawingObjects));
   }
 }
